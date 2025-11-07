@@ -141,6 +141,7 @@ celerybeat.pid
 env/
 venv/
 ENV/
+niceshot_env/
 env.bak/
 venv.bak/
 
