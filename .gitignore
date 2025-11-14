@@ -207,3 +207,7 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Extra Files
+full_app.py
+gui.py
