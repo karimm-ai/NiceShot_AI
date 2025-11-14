@@ -38,6 +38,8 @@ pip install -r requirements.txt
 
 ### **Sample Run**
 ```
+from niceshot_ai import NiceShot_AI
+
 niceshot = NiceShot_AI('yolov8n-cod_bo6.pt', # YOLO Model Path
                         'ffmpeg-win-x86_64-v7.1.exe', # FFMPEG Path
                         "https://www.twitch.tv/your_channel", # CoD BO6 gameplay video or Twitch Channel Link
