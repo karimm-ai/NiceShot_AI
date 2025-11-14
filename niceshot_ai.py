@@ -20,7 +20,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 
 
-
 def get_duration(clip_path):
     cmd = [
         "ffprobe",
@@ -74,18 +73,16 @@ class Event:
 
 class Clipper:
     """Clipper class for clipping segments from a video path"""
-    def __init__(self, ffmpeg_path, video_path):
+    def __init__(self, ffmpeg_path):
         self.ffmpeg_path = ffmpeg_path
-        self.video_path = video_path
 
-
-    def clip_event(self, output_dir: str, event):  
+    def clip_event(self, output_dir: str, event, video_path):  
         output_path = os.path.join(output_dir, event['desc'])
 
         subprocess.run([
         self.ffmpeg_path,
         "-ss", str(event['timestart']),
-        "-i", self.video_path,
+        "-i", video_path,
         "-to", str(event['timeend'] - event['timestart']),
         "-c:v", "libx264",
         "-preset", "fast",
@@ -177,11 +174,14 @@ class KillEventsProcessor:
         print(f"Found a kill streak. Videos concatenated successfully into {output_file}")
     
 
-    def move_best_kills_to_folder(self, best_kills, total_needed_clips, new_folder):
+    def move_best_kills_to_folder(self, best_kills, montage_length, new_folder):
         print(f"Moving best clips to {self.output_dir}/{new_folder}\n")
         final_clips = []
-        for i in range(total_needed_clips):
-            final_clips.append(best_kills[i][0])
+        current_length = 0
+        while current_length <= montage_length:
+            vid_path = best_kills.pop(0)[0]
+            final_clips.append(vid_path)
+            current_length += get_duration(vid_path)
 
         for clip in final_clips:
             shutil.copy(clip, new_folder)
@@ -230,7 +230,7 @@ class KillEventsProcessor:
                 collected_clips = False
 
 
-    def concat_kill_streaks_new(self):
+    def concat_kill_streaks_new(self, video_num):
         with open('events_temp.json', 'r') as f:
             events = json.load(f)
         
@@ -272,7 +272,7 @@ class KillEventsProcessor:
             if len(streak) > 1:
                 merged.append(Event(EventType.KILLSTREAK,
                     streak[0]["timestart"],
-                    streak[-1]["timeend"]))
+                    streak[-1]["timeend"], video_num))
 
         merged = [event.to_dict() for event in merged]
         for event in events:
@@ -282,6 +282,8 @@ class KillEventsProcessor:
 
         with open('events_temp_2.json', 'w') as f:
             json.dump(merged, f, indent=2)
+        
+        os.remove('events_temp.json')
     
 
 
@@ -393,7 +395,7 @@ class NiceShot_AI:
                  seconds_before_kill=2, 
                  seconds_after_kill=2, 
                  seconds_before_death=2,
-                 seconds_after_death=0.5,
+                 seconds_after_death=1,
                  frame_idx_start= 0,
                  frames_to_skip=5,
                  add_to_csv=False,
@@ -403,7 +405,7 @@ class NiceShot_AI:
                  ):
 
         self.output_dir = output_dir
-        self.video_path = [] + video_path
+        self.video_path = [video_path]
         self.csv_file = csv_file
         self.count_kills = count_kills
         self.count_deaths = count_deaths
@@ -428,22 +430,21 @@ class NiceShot_AI:
         
         self.ocr = RapidOCR()
 
-        if 'twitch' in self.video_path:
-            twitch_handler = TwitchHandler(self.video_path, max_videos)
+        if 'twitch' in self.video_path[0]:
+            twitch_handler = TwitchHandler(self.video_path[0], max_videos, self.output_dir)
             vods = twitch_handler.get_all_videos()
             with open ('vods.txt', 'w') as file:
                 for vod in vods:
                     file.write(f"{vod}\n")
             
             twitch_handler.download_channel_videos(vods)
-            self.video_path = [path for path in f"{self.output_dir}/Downloads"]
+            self.video_path = [f"{self.output_dir}/Downloads/{file}" for file in os.listdir(f"{self.output_dir}/Downloads")]
             
-
         if self.save_clips:
             self.ffmpeg_path = self.resource_path(ffmpeg_path)
             self.clip_queue = Queue()
             
-            self.clipper = Clipper(self.ffmpeg_path, self.video_path)
+            self.clipper = Clipper(self.ffmpeg_path)
             
             self.KILL_DIR = ''.join((self.output_dir, '/Kills'))
             self.DEATH_DIR = ''.join((self.output_dir, '/Deaths'))
@@ -504,7 +505,7 @@ class NiceShot_AI:
         medal_tracker = DeepSort(max_age=30, nms_max_overlap=0.6)
         
         if self.count_deaths:
-            death_tracker = DeepSort(max_age=60)
+            death_tracker = DeepSort(max_age=30)
 
         for i, video_path in enumerate(self.video_path):
             cap = cv2.VideoCapture(video_path)
@@ -637,9 +638,10 @@ class NiceShot_AI:
                 
             if len(self.events) > 0:
                 self.add_to_json()
+                self.events.clear()
 
             if self.count_kills:
-                self.kills_proc.concat_kill_streaks_new()
+                self.kills_proc.concat_kill_streaks_new(i+1)
 
             cap.release()
             cv2.destroyAllWindows()
@@ -656,11 +658,11 @@ class NiceShot_AI:
                 events = json.load(f)
             clip_events = []
             for event in events:
+                video_path = self.video_path[int(event['desc'][-14])-1]
                 if (event['type'] == 'KILL' or event['type'] == 'KILLSTREAK') and self.count_kills:
-                    clip_events.append((self.KILL_DIR, event))
+                    clip_events.append((self.KILL_DIR, event, video_path))
                 elif event['type'] == 'DEATH' and self.count_deaths:
-                    clip_events.append((self.DEATH_DIR, event))
-            
+                    clip_events.append((self.DEATH_DIR, event, video_path))
             progress_bar = tqdm(total=len(clip_events), desc="Extracting clips", unit="clip")
 
             for _ in range(self.max_workers):
@@ -676,14 +678,13 @@ class NiceShot_AI:
 
             progress_bar.close()
 
-        if (self.create_montage or self.montage_length_sec > 0) and self.count_kills:
+        if (self.create_montage or self.montage_length_sec > 0) and self.count_kills:# and self.save_clips
             best_kill_clips = self.kills_proc.find_best_kills()
-
-            total_needed_clips = self.montage_length_sec/get_duration(best_kill_clips[0][0])
+            #best_kill_clips = [('Clients/Kills/KILLSTREAKin3@00.06.50.mp4', 7), ('Clients/Kills/KILLSTREAKin3@00.38.25.mp4', 4), ('Clients/Kills/KILLin1@00.56.39.mp4', 3), ('Clients/Kills/KILLin3@00.12.12.mp4', 3), ('Clients/Kills/KILLin2@00.09.48.mp4', 2), ('Clients/Kills/KILLin2@00.10.00.mp4', 2), ('Clients/Kills/KILLin2@00.10.43.mp4', 2), ('Clients/Kills/KILLin2@00.24.06.mp4', 2), ('Clients/Kills/KILLin2@00.44.39.mp4', 2), ('Clients/Kills/KILLin2@00.45.03.mp4', 2), ('Clients/Kills/KILLin2@00.53.12.mp4', 2), ('Clients/Kills/KILLin2@00.53.35.mp4', 2), ('Clients/Kills/KILLin3@00.08.29.mp4', 2), ('Clients/Kills/KILLin3@00.30.58.mp4', 2), ('Clients/Kills/KILLin2@00.08.33.mp4', 1), ('Clients/Kills/KILLin2@00.11.29.mp4', 1), ('Clients/Kills/KILLin2@00.11.31.mp4', 1), ('Clients/Kills/KILLin2@00.13.17.mp4', 1), ('Clients/Kills/KILLin2@00.13.32.mp4', 1), ('Clients/Kills/KILLin2@00.14.20.mp4', 1), ('Clients/Kills/KILLin2@00.14.27.mp4', 1), ('Clients/Kills/KILLin2@00.16.30.mp4', 1), ('Clients/Kills/KILLin2@00.16.42.mp4', 1), ('Clients/Kills/KILLin2@00.17.15.mp4', 1), ('Clients/Kills/KILLin2@00.17.40.mp4', 1), ('Clients/Kills/KILLin2@00.22.33.mp4', 1), ('Clients/Kills/KILLin2@00.23.11.mp4', 1), ('Clients/Kills/KILLin2@00.23.23.mp4', 1), ('Clients/Kills/KILLin2@00.23.44.mp4', 1), ('Clients/Kills/KILLin2@00.24.18.mp4', 1), ('Clients/Kills/KILLin2@00.24.20.mp4', 1), ('Clients/Kills/KILLin2@00.24.31.mp4', 1), ('Clients/Kills/KILLin2@00.24.47.mp4', 1), ('Clients/Kills/KILLin2@00.26.36.mp4', 1), ('Clients/Kills/KILLin2@00.27.52.mp4', 1), ('Clients/Kills/KILLin2@00.44.16.mp4', 1), ('Clients/Kills/KILLin2@00.52.53.mp4', 1), ('Clients/Kills/KILLin2@00.56.59.mp4', 1), ('Clients/Kills/KILLin2@00.57.07.mp4', 1), ('Clients/Kills/KILLin2@00.58.21.mp4', 1), ('Clients/Kills/KILLin2@00.58.30.mp4', 1), ('Clients/Kills/KILLin3@00.08.15.mp4', 1), ('Clients/Kills/KILLin3@00.12.21.mp4', 1), ('Clients/Kills/KILLin3@00.23.57.mp4', 1), ('Clients/Kills/KILLSTREAKin3@00.09.29.mp4', 1), ('Clients/Kills/KILLSTREAKin3@00.37.35.mp4', 1), ('Clients/Kills/KILLin1@00.14.42.mp4', 0), ('Clients/Kills/KILLin1@00.15.31.mp4', 0), ('Clients/Kills/KILLin1@00.15.57.mp4', 0), ('Clients/Kills/KILLin1@00.16.16.mp4', 0), ('Clients/Kills/KILLin1@00.17.36.mp4', 0), ('Clients/Kills/KILLin1@00.17.47.mp4', 0), ('Clients/Kills/KILLin1@00.18.04.mp4', 0), ('Clients/Kills/KILLin1@00.18.22.mp4', 0), ('Clients/Kills/KILLin1@00.18.48.mp4', 0), ('Clients/Kills/KILLin1@00.19.36.mp4', 0), ('Clients/Kills/KILLin1@00.19.38.mp4', 0), ('Clients/Kills/KILLin1@00.20.24.mp4', 0), ('Clients/Kills/KILLin1@00.21.56.mp4', 0), ('Clients/Kills/KILLin1@00.22.13.mp4', 0), ('Clients/Kills/KILLin1@00.23.18.mp4', 0), ('Clients/Kills/KILLin1@00.23.28.mp4', 0), ('Clients/Kills/KILLin1@00.23.39.mp4', 0), ('Clients/Kills/KILLin1@00.23.52.mp4', 0), ('Clients/Kills/KILLin1@00.47.42.mp4', 0), ('Clients/Kills/KILLin1@00.53.32.mp4', 0), ('Clients/Kills/KILLin1@00.58.02.mp4', 0), ('Clients/Kills/KILLin1@00.58.18.mp4', 0), ('Clients/Kills/KILLin2@00.08.05.mp4', 0), ('Clients/Kills/KILLin2@00.10.04.mp4', 0), ('Clients/Kills/KILLin2@00.13.02.mp4', 0), ('Clients/Kills/KILLin2@00.17.36.mp4', 0), ('Clients/Kills/KILLin2@00.21.57.mp4', 0), ('Clients/Kills/KILLin2@00.24.00.mp4', 0), ('Clients/Kills/KILLin2@00.25.14.mp4', 0), ('Clients/Kills/KILLin2@00.25.56.mp4', 0), ('Clients/Kills/KILLin2@00.26.09.mp4', 0), ('Clients/Kills/KILLin2@00.27.05.mp4', 0), ('Clients/Kills/KILLin2@00.40.56.mp4', 0), ('Clients/Kills/KILLin2@00.40.57.mp4', 0), ('Clients/Kills/KILLin2@00.41.59.mp4', 0), ('Clients/Kills/KILLin2@00.43.18.mp4', 0), ('Clients/Kills/KILLin2@00.46.27.mp4', 0), ('Clients/Kills/KILLin2@00.46.38.mp4', 0), ('Clients/Kills/KILLin2@00.51.09.mp4', 0), ('Clients/Kills/KILLin2@00.53.30.mp4', 0), ('Clients/Kills/KILLin2@00.54.00.mp4', 0), ('Clients/Kills/KILLin2@00.54.53.mp4', 0), ('Clients/Kills/KILLin2@00.55.38.mp4', 0), ('Clients/Kills/KILLin2@00.56.42.mp4', 0), ('Clients/Kills/KILLin2@00.56.48.mp4', 0), ('Clients/Kills/KILLin2@00.58.01.mp4', 0), ('Clients/Kills/KILLin2@00.58.53.mp4', 0), ('Clients/Kills/KILLin3@00.09.10.mp4', 0), ('Clients/Kills/KILLin3@00.15.10.mp4', 0), ('Clients/Kills/KILLin3@00.21.30.mp4', 0), ('Clients/Kills/KILLin3@00.24.05.mp4', 0), ('Clients/Kills/KILLin3@00.30.05.mp4', 0), ('Clients/Kills/KILLin3@00.32.01.mp4', 0), ('Clients/Kills/KILLin3@00.39.23.mp4', 0), ('Clients/Kills/KILLin3@00.39.31.mp4', 0), ('Clients/Kills/KILLin3@00.42.10.mp4', 0), ('Clients/Kills/KILLin3@00.43.00.mp4', 0), ('Clients/Kills/KILLin3@00.58.41.mp4', 0), ('Clients/Kills/KILLin3@00.59.06.mp4', 0), ('Clients/Kills/KILLin3@00.59.24.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.11.13.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.11.48.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.14.32.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.15.19.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.16.11.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.16.13.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.16.24.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.17.06.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.18.59.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.19.20.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.20.04.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.21.24.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.21.43.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.22.52.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.23.16.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.25.01.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.27.19.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.35.28.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.41.31.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.43.16.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.43.46.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.44.08.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.54.42.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.55.08.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.55.29.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.56.03.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.56.24.mp4', 0)]
             new_folder = ''.join((self.output_dir, '/best_kill_clips'))
             os.makedirs(new_folder, exist_ok=True)
 
-            self.kills_proc.move_best_kills_to_folder(best_kill_clips, ceil(total_needed_clips), new_folder)
+            self.kills_proc.move_best_kills_to_folder(best_kill_clips, self.montage_length_sec, new_folder)
 
             montage = Montage()
             montage.make_compilation(new_folder, f"{self.output_dir}/highlight_reel.mp4")
@@ -825,7 +826,7 @@ class TwitchHandler:
     
 
     def download_video(self, video, name):
-        save_path = f"{self.output_dir}./Downloads"
+        save_path = f"{self.output_dir}/Downloads"
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 
@@ -845,9 +846,9 @@ class TwitchHandler:
 
     def download_channel_videos(self, links):
         for i in range(self.max_videos):
+            print(f"Downloading Video {i+1} from {links[i]}")
             self.download_video(links[i], f'{i}')
-            print(f"Downloading Video {i} from {links[i]}")
 
             for file in os.listdir(f"{self.output_dir}/Downloads"):
-                if not file.endswith('.mp4'):
-                    os.remove(file)
+                if not file.endswith('.mp4') or 'temp' in file:
+                    os.remove(f"{self.output_dir}/Downloads/{file}")
