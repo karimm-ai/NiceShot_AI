@@ -1,13 +1,11 @@
 from dataclasses import dataclass
 from math import ceil
-import os, sys
+import os, sys, subprocess, threading
 import cv2
 from ultralytics import YOLO
 from deep_sort_realtime.deepsort_tracker import DeepSort
 from tqdm import tqdm
-import subprocess
 import logging
-import threading
 from queue import Queue
 import csv, time, json, shutil
 from rapidocr import RapidOCR
@@ -32,7 +30,6 @@ def get_duration(clip_path):
     info = json.loads(result.stdout)
 
     return float(info['format']['duration'])
-
 
 
 class EventType(Enum):
@@ -73,26 +70,54 @@ class Event:
 
 class Clipper:
     """Clipper class for clipping segments from a video path"""
-    def __init__(self, ffmpeg_path):
+    def __init__(self, ffmpeg_path, vertical_format):
         self.ffmpeg_path = ffmpeg_path
+        self.vertical_format = vertical_format
+        self.crop_width = 608
+        self.crop_height = 1080
+        self.x_offset = "(in_w - {0})/2".format(self.crop_width)
+        self.y_offset = "(in_h - {0})/2".format(self.crop_height)
+
 
     def clip_event(self, output_dir: str, event, video_path):  
         output_path = os.path.join(output_dir, event['desc'])
 
-        subprocess.run([
-        self.ffmpeg_path,
-        "-ss", str(event['timestart']),
-        "-i", video_path,
-        "-to", str(event['timeend'] - event['timestart']),
-        "-c:v", "libx264",
-        "-preset", "fast",
-        "-crf", "18",
-        "-c:a", "aac",
-        "-b:a", "192k",
-        "-movflags", "+faststart",
-        "-loglevel", "error",
-        output_path
-        ])
+        if not self.vertical_format:
+            subprocess.run([
+            self.ffmpeg_path,
+            "-ss", str(event['timestart']),
+            "-i", video_path,
+            "-to", str(event['timeend'] - event['timestart']),
+            "-c:v", "libx264",
+            "-preset", "fast",
+            "-crf", "18",
+            "-c:a", "aac",
+            "-b:a", "192k",
+            "-movflags", "+faststart",
+            "-loglevel", "error",
+            output_path
+            ])
+        
+        else:
+            cmd = [
+                "ffmpeg",
+                "-ss", str(event['timestart']),
+                "-i", video_path,
+                "-to", str(event['timeend'] - event['timestart']),
+                "-filter:v",
+                f"crop={self.crop_width}:{self.crop_height}:{self.x_offset}:{self.y_offset},scale=1080:1920,setsar=1",
+                "-c:v", "libx264",
+                "-crf", "23",
+                "-preset", "fast",
+                "-y",  # Overwrite output if exists
+                output_path
+            ]
+
+            try:
+                subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+                print(f"✅ Successfully extracted vertical TikTok video: {output_path}")
+            except subprocess.CalledProcessError as e:
+                print(f"❌ FFmpeg error: {e.stderr.decode()}")
 
 
 
@@ -401,7 +426,8 @@ class NiceShot_AI:
                  add_to_csv=False,
                  create_montage=False,
                  montage_length_sec=20,
-                 max_videos = 1
+                 max_videos = 1,
+                 vertical_format = False
                  ):
 
         self.output_dir = output_dir
@@ -424,9 +450,11 @@ class NiceShot_AI:
         self.events = []
         self.filename = 'events_temp.json'
         self.montage_length_sec = montage_length_sec
+        self.vertical_format = vertical_format
 
         self.model_path = self.resource_path(model_path)
         self.ffmpeg_path = self.resource_path(ffmpeg_path)
+        print(self.ffmpeg_path)
         
         self.ocr = RapidOCR()
 
@@ -441,10 +469,10 @@ class NiceShot_AI:
             self.video_path = [f"{self.output_dir}/Downloads/{file}" for file in os.listdir(f"{self.output_dir}/Downloads")]
             
         if self.save_clips:
-            self.ffmpeg_path = self.resource_path(ffmpeg_path)
+            #self.ffmpeg_path = self.resource_path(ffmpeg_path)
             self.clip_queue = Queue()
             
-            self.clipper = Clipper(self.ffmpeg_path)
+            self.clipper = Clipper(self.ffmpeg_path, self.vertical_format)
             
             self.KILL_DIR = ''.join((self.output_dir, '/Kills'))
             self.DEATH_DIR = ''.join((self.output_dir, '/Deaths'))
@@ -688,7 +716,9 @@ class NiceShot_AI:
 
             montage = Montage()
             montage.make_compilation(new_folder, f"{self.output_dir}/highlight_reel.mp4")
-            montage.make_tiktok(f"{self.output_dir}/highlight_reel.mp4", f"{self.output_dir}/highlight_reel_tiktok.mp4")
+            
+            if not self.vertical_format:
+                montage.make_tiktok(f"{self.output_dir}/highlight_reel.mp4", f"{self.output_dir}/highlight_reel_tiktok.mp4")
         
 
     def find_event_frames(self, event_frames, event_type: EventType):
@@ -769,7 +799,7 @@ class TwitchHandler:
         options.add_argument("--headless")
         options.add_argument("--disable-gpu")
         driver = webdriver.Chrome(options=options)
-        driver.get(f"{self.channel_link}/videos?filter=all&sort=views")
+        driver.get(f"{self.channel_link}/videos?filter=all&sort=time")
         desired_game = "Call of Duty: Black Ops 6"
         video_urls = set()
         last_height = driver.execute_script("return document.body.scrollHeight")
