@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from math import ceil
 import os, sys, subprocess, threading
 import cv2
 from ultralytics import YOLO
@@ -212,6 +211,7 @@ class KillEventsProcessor:
             shutil.copy(clip, new_folder)
 
 
+    """Old Version
     def concat_kill_streaks(self,):
         time_old = 0
         time_new = 0
@@ -253,6 +253,7 @@ class KillEventsProcessor:
                 clips_to_concat["clips"].append(clip)
                 clips_to_concat["time"].append(time_new)
                 collected_clips = False
+    """
 
 
     def concat_kill_streaks_new(self, video_num):
