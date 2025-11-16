@@ -61,6 +61,8 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
+---
+
 ### **Run the tool**
 ```
 from niceshot_ai import NiceShot_AI
@@ -84,3 +86,5 @@ niceshot = NiceShot_AI('yolov8n-cod_bo6.pt', # YOLO Model Path
 
 niceshot.detect_events()
 ```
+
+---
