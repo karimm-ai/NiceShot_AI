@@ -14,9 +14,7 @@ NiceShot AI is a Python tool powered by computer vision to analyze gameplay vide
 
 ### **Model Description**
 
-YOLOv8n by Ultralytics. Fine-tuned on custom collected & annotated dataset of gameplay videos for Call of Duty: Black Ops 6. Model detects kill, death and medal pop up events with good accuracy. Model is expected to generalize well on modern Call of Duty games as there core gameplay does not vastly change. Model is tested on Call of Duty: Black Ops 7 with providing initial very good detection results.
-
-Model Results on Call of Duty: Black Ops 6:
+YOLOv8n by Ultralytics. Fine-tuned on custom collected & annotated dataset of gameplay videos for Call of Duty: Black Ops 6. Model detects kill, death and medal pop up events with good confidence. Model is expected to generalize well on modern Call of Duty games as there core gameplay does not vastly change. Model is also slightly tested on Call of Duty: Black Ops 7 providing initial very good detection results.
 
 ---
 
