@@ -1,6 +1,7 @@
 ## **NiceShot_AI: Python Computer Vision Tool**
 
 NiceShot AI is a Python tool powered by computer vision to analyze gameplay videos. With the integration of cutting-edge tools like YOLO, OpenCV, and FFmpeg, NiceShot AI is designed to automatically detect, track and clip key gameplay events from Call of Duty: Black Ops 6.
+
 Simple demo showcasing tool results: (https://youtu.be/nFs7VJxT-Ig)
 
 ---
