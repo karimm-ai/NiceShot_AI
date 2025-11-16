@@ -18,6 +18,8 @@ from selenium.webdriver.chrome.options import Options
 
 
 def get_duration(clip_path):
+    """Returns the duration of a video using ffprobe"""
+
     cmd = [
         "ffprobe",
         "-v", "error",
@@ -33,6 +35,7 @@ def get_duration(clip_path):
 
 class EventType(Enum):
     """Types of Events: Model can detect only Kills, Deaths, Medal pop ups"""
+
     KILL = auto()
     MEDAL = auto()
     DEATH = auto()
@@ -43,6 +46,7 @@ class EventType(Enum):
 @dataclass
 class Event:
     """Attributes for an event"""
+
     type: EventType
     timestart: float
     timeend: float
@@ -69,6 +73,7 @@ class Event:
 
 class Clipper:
     """Clipper class for clipping segments from a video path"""
+
     def __init__(self, ffmpeg_path, vertical_format):
         self.ffmpeg_path = ffmpeg_path
         self.vertical_format = vertical_format
@@ -122,6 +127,7 @@ class Clipper:
 
 class KillEventsProcessor:
     """Finds top kill clips and kill streaks"""
+
     def __init__(self, model_path, output_dir):
         self.model_path = model_path
         self.output_dir = output_dir
@@ -203,6 +209,9 @@ class KillEventsProcessor:
         final_clips = []
         current_length = 0
         while current_length <= montage_length:
+            if not len(best_kills) > 0:
+                break
+            
             vid_path = best_kills.pop(0)[0]
             final_clips.append(vid_path)
             current_length += get_duration(vid_path)
@@ -315,6 +324,7 @@ class KillEventsProcessor:
 
 class Montage:
     """Compiles all clips within a folder into 1 clip with simple edit and converts a video from horizontal aspect to vertical"""
+
     def __init__(self,):
         pass
    
@@ -407,6 +417,7 @@ class Montage:
 
 class NiceShot_AI:
     """Main Class for detecting events"""
+
     def __init__(self, model_path,
                  ffmpeg_path,
                  video_path,
@@ -717,6 +728,7 @@ class NiceShot_AI:
 
             montage = Montage()
             montage.make_compilation(new_folder, f"{self.output_dir}/highlight_reel.mp4")
+            os.remove('events_temp_2.json')
             
             if not self.vertical_format:
                 montage.make_tiktok(f"{self.output_dir}/highlight_reel.mp4", f"{self.output_dir}/highlight_reel_tiktok.mp4")
@@ -789,6 +801,8 @@ class NiceShot_AI:
 
 
 class TwitchHandler:
+    """Handles Twitch videos grabbing and downloading using Selenium"""
+
     def __init__(self, channel_link, max_videos, output_dir):
         self.channel_link = channel_link
         self.max_videos = max_videos
@@ -796,6 +810,8 @@ class TwitchHandler:
 
 
     def get_all_videos(self,):
+        """Returns all detected Call of Duty: Black Ops 6 videos on a user's channel"""
+
         options = Options()
         options.add_argument("--headless")
         options.add_argument("--disable-gpu")
@@ -804,7 +820,8 @@ class TwitchHandler:
         desired_game = "Call of Duty: Black Ops 6"
         video_urls = set()
         last_height = driver.execute_script("return document.body.scrollHeight")
-        print("Entering Loop")
+        
+        print("Fetching videos")
 
         while True:
             video_elements = driver.find_elements(By.XPATH, "//a[contains(@href, '/videos/')]")
@@ -857,6 +874,8 @@ class TwitchHandler:
     
 
     def download_video(self, video, name):
+        """Downloads a single video from Twitch using yt-dlp"""
+
         save_path = f"{self.output_dir}/Downloads"
         if not os.path.exists(save_path):
             os.makedirs(save_path)
@@ -876,6 +895,8 @@ class TwitchHandler:
 
 
     def download_channel_videos(self, links):
+        """Downloads videos from the grabbed Twitch links"""
+
         for i in range(self.max_videos):
             print(f"Downloading Video {i+1} from {links[i]}")
             self.download_video(links[i], f'{i}')
