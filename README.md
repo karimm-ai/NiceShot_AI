@@ -16,7 +16,7 @@ Simple demo showcasing tool results: (https://youtu.be/nFs7VJxT-Ig)
 
 ### **Model Description**
 
-YOLOv8n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned on custom collected & annotated dataset of gameplay videos for Call of Duty: Black Ops 6. Model detects kill, death and medal pop up events with good confidence. Model is expected to generalize well on modern Call of Duty games as there core gameplay does not vastly change. Model is also slightly tested on Call of Duty: Black Ops 7 providing initial very good detection results.
+YOLOv8n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned on custom collected & annotated dataset of gameplay videos for Call of Duty: Black Ops 6. Model detects kill, death and medal pop up events with good confidence. Model is expected to generalize well on modern Call of Duty games as there core gameplay does not vastly change. Model is also tested on one Call of Duty: Black Ops 7 gameplay video providing initial very good detection results.
 
 ---
 
@@ -29,6 +29,13 @@ YOLOv8n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned
 - **Generating Kills Highlight Reel**: Concatenating best or all extracted kill clips into one video with simple fade in & out transitions between clips in both vertical & horizontal formats.
 - **Analyzing BO6 videos in bulk from a Twitch channel**: Downloads and analyzes CoD BO6 streams from a Twitch channel performing bulk analysis of gameplay videos.
 - **Events Timestamping & CSV Output**: Timestamps detected events and dumps into a CSV file with 2 columns [Timestamp, Event] for further gameplay data analysis and inspections.
+
+---
+
+### **Advanced Tool Features**
+
+- **Accurate Event Clipping**: Using RapidOCR to avoid counting frames of KILLCAMS and SPECTATING.
+- **Custom Montage Lengths**: Allowing for creating compilations of any length.
 
 ---
 
@@ -54,7 +61,7 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-#### **Run the tool**
+### **Run the tool**
 ```
 from niceshot_ai import NiceShot_AI
 
@@ -66,14 +73,14 @@ niceshot = NiceShot_AI('yolov8n-cod_bo6.pt', # YOLO Model Path
                         total_hours=0.5, # Total hours to analyze of the video (each video in case analyzing a Twitch Channel)
                         save_clips=True, # Save clips locally
                         add_to_csv=True, # Add events and timestamps to a CSV file.
-                        output_dir='Clients', # Output directory where all clips, highlights and CSV file are saved
-                        csv_file='client1_0.csv', # CSV file path
+                        output_dir='outputs', # Output directory where all clips, highlights and CSV file are saved
+                        csv_file='timestamps.csv', # CSV file path
                         frames_to_skip=8, # Frames to skip during analysis (The more, the faster the analysis is finished)
                         frame_idx_start=0, # Starting frame
                         create_montage=True, # Create a highlight reel of kills
                         max_workers=4, # Default
-                        max_videos=3, # Only useful if passing a Twitch channel as it gets the recent num videos
-                        montage_length_sec=50) # Total duration of the generated highlight reel
+                        max_videos=3, # Only useful if passing a Twitch channel as it gets the most recent specified number of videos
+                        montage_length_sec=50) # Total duration of the generated highlight reel in seconds
 
 niceshot.detect_events()
 ```
