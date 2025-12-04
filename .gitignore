@@ -145,6 +145,7 @@ ENV/
 niceshot_env/
 env.bak/
 venv.bak/
+niceshotai_env
 
 # Spyder project settings
 .spyderproject
