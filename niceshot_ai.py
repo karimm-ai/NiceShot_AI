@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import numpy as np
 import os, sys, subprocess, threading
 import cv2
 from ultralytics import YOLO
@@ -8,6 +9,13 @@ import logging
 from queue import Queue
 import csv, time, json, shutil
 from rapidocr import RapidOCR
+from paddleocr import PaddleOCR
+import easyocr
+from surya.foundation import FoundationPredictor
+from surya.recognition import RecognitionPredictor
+from surya.detection import DetectionPredictor
+from PIL import Image
+
 from enum import Enum, auto
 import yt_dlp
 from selenium import webdriver
@@ -15,6 +23,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+import clip
+import torch
 
 
 def get_duration(clip_path):
@@ -94,34 +104,99 @@ class Clipper:
             "-to", str(event['timeend'] - event['timestart']),
             "-c:v", "libx264",
             "-preset", "fast",
-            "-crf", "18",
+            "-crf", "23",
             "-c:a", "aac",
             "-b:a", "192k",
             "-movflags", "+faststart",
             "-loglevel", "error",
+            "-y",
+
             output_path
             ])
         
         else:
             cmd = [
-                "ffmpeg",
+                self.ffmpeg_path,
                 "-ss", str(event['timestart']),
                 "-i", video_path,
-                "-to", str(event['timeend'] - event['timestart']),
+                "-t", str(event['timeend'] - event['timestart']),
                 "-filter:v",
                 f"crop={self.crop_width}:{self.crop_height}:{self.x_offset}:{self.y_offset},scale=1080:1920,setsar=1",
                 "-c:v", "libx264",
                 "-crf", "23",
                 "-preset", "fast",
-                "-y",  # Overwrite output if exists
+                "-movflags", "+faststart",
+                "-y",
                 output_path
             ]
 
+
             try:
                 subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-                print(f"✅ Successfully extracted vertical TikTok video: {output_path}")
+                #print(f"✅ Successfully extracted vertical TikTok video: {output_path}")
             except subprocess.CalledProcessError as e:
                 print(f"❌ FFmpeg error: {e.stderr.decode()}")
+
+
+import torch
+import clip
+import cv2
+from PIL import Image
+
+class CLIPTextGate:
+    def __init__(self, device="cuda"):
+        self.device = device
+        self.model, self.preprocess = clip.load("RN50", device=device)
+
+        forbidden = [
+            "a video game screen where the player is spectating and cannot control the character",
+            "a shooter game screen with a spectating overlay and no weapon visible",
+            "a game over screen after the player is eliminated",
+            "a shooter game showing an elimination message covering the screen",
+            "a replay or killcam sequence in a shooter game",
+            "a cinematic killcam replay with camera following another player",
+            "a match highlight replay shown after a round ends",
+            "a final kill replay shown at the end of a match"
+        ]
+
+        allowed = [
+        "a first person shooter gameplay screen where the player is actively controlling the character",
+        "live first person shooter gameplay with a visible weapon and crosshair",
+        "a player aiming a gun during active shooter gameplay",
+        "a first person view with weapon model and HUD during live gameplay",
+        "real time shooter gameplay where the player can move and shoot",
+        "normal multiplayer shooter gameplay during an active match"
+    ]
+
+
+        self.prompts = forbidden + allowed
+        self.allowed_count = len(allowed)
+
+
+        tokens = clip.tokenize(self.prompts).to(device)
+
+        with torch.no_grad():
+            self.text_features = self.model.encode_text(tokens)
+            self.text_features /= self.text_features.norm(dim=-1, keepdim=True)
+
+        self.forbidden_count = len(forbidden)
+
+    def has_invalid_text(self, frame_bgr, threshold=0.4):
+        return
+        image = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+        image = Image.fromarray(image)
+        image = self.preprocess(image).unsqueeze(0).to(self.device)
+
+        with torch.no_grad():
+            image_features = self.model.encode_image(image)
+            image_features /= image_features.norm(dim=-1, keepdim=True)
+
+            similarity = image_features @ self.text_features.T
+
+        forbidden_score = similarity[0, :self.forbidden_count].max().item()
+        allowed_score = similarity[0, self.forbidden_count:].max().item()
+
+        return forbidden_score > allowed_score and forbidden_score > threshold
 
 
 
@@ -139,6 +214,7 @@ class KillEventsProcessor:
         print("Extracting Best clips\n")
 
         model = YOLO(self.model_path)
+        #model.to('cuda')
         medal_tracker = DeepSort(max_age=30)
         clips_medals = {}
         
@@ -180,7 +256,7 @@ class KillEventsProcessor:
                     pbar.update(1)
             
             cap.release()
-            cv2.destroyAllWindows()
+            #cv2.destroyAllWindows()
 
         sorted_clips_medals= sorted(clips_medals.items(), key=lambda item: item[1], reverse=True)
         print(sorted_clips_medals)
@@ -218,51 +294,6 @@ class KillEventsProcessor:
 
         for clip in final_clips:
             shutil.copy(clip, new_folder)
-
-
-    """Old Version
-    def concat_kill_streaks(self,):
-        time_old = 0
-        time_new = 0
-        clips_to_concat = {'clips': [], 'time': []}
-        collected_clips = False
-        print("Starting Kill Streaks Analysis!\n")
-        for clip in os.listdir(f"{self.output_dir}/Kills"):
-            time_old = time_new
-            clip_imp = clip.replace(".mp4", "")[5:]
-            clip_time = clip_imp.split('.')
-            print(clip_time)
-            if len(clip_time) == 2:
-                time_new = int(clip_time[0])*60 + int(clip_time[1])
-
-            elif len(clip_time) == 3:
-                time_new = int(clip_time[0])*60*60 + int(clip_time[1])*60 + int(clip_time[2])
-
-            print(time_new)
-
-            if time_new > time_old+4 and len(clips_to_concat['clips']) >=2:
-                collected_clips = True
-
-            elif time_new > time_old+4 and len(clips_to_concat['clips']) ==1:
-                clips_to_concat['clips'].pop()
-                clips_to_concat['time'].pop()
-                clips_to_concat['clips'].append(clip)
-                clips_to_concat['time'].append(time_new)
-
-            else:
-                clips_to_concat['clips'].append(clip)
-                clips_to_concat['time'].append(time_new)
-
-
-            if collected_clips:
-                kill_streak = len(clips_to_concat['clips'])
-                self.concat_temp_clips(clips_to_concat, f"{self.output_dir}/Kills/{kill_streak}_kills_streak@{clips_to_concat['clips'][0][5:]}.mp4")
-                clips_to_concat["clips"] = []
-                clips_to_concat["time"] = []
-                clips_to_concat["clips"].append(clip)
-                clips_to_concat["time"].append(time_new)
-                collected_clips = False
-    """
 
 
     def concat_kill_streaks_new(self, video_num):
@@ -318,7 +349,7 @@ class KillEventsProcessor:
         with open('events_temp_2.json', 'w') as f:
             json.dump(merged, f, indent=2)
         
-        os.remove('events_temp.json')
+        #os.remove('events_temp.json')
     
 
 
@@ -330,7 +361,7 @@ class Montage:
    
 
     def make_compilation(self, input_folder, output_file, fade_duration=0.5):
-        print("Creating Montage!\n")
+        print("Creating Montage...\n")
         clips = sorted([f for f in os.listdir(input_folder) if f.endswith('.mp4')])
         if not clips:
             print("❌ No clips found.")
@@ -374,13 +405,15 @@ class Montage:
             "-preset", "fast",
             "-c:a", "aac",
             "-b:a", "192k",
+            "-vsync", "2",
+            "-async", "1",
             "-y",
             output_file
         ])
 
         try:
             subprocess.run(cmd, check=True)
-            print(f"✅ Montage with fades created: {output_file}")
+            print(f"✅ Montage with fade transitions created: {output_file}")
         except subprocess.CalledProcessError as e:
             print(f"❌ FFmpeg error: {e}")
 
@@ -469,7 +502,15 @@ class NiceShot_AI:
         print(self.ffmpeg_path)
         
         self.ocr = RapidOCR()
-
+        #self.ocr = PaddleOCR()
+        #self.ocr = easyocr.Reader(['en'], gpu=True)
+        # self.foundation_predictor = FoundationPredictor()
+        # self.recognition_predictor = RecognitionPredictor(self.foundation_predictor)
+        # self.recognition_predictor.disable_tqdm = True
+        # self.detection_predictor = DetectionPredictor()
+        # self.detection_predictor.disable_tqdm = True
+        # self.clip_gate = CLIPTextGate()
+        
         if 'twitch' in self.video_path[0]:
             twitch_handler = TwitchHandler(self.video_path[0], max_videos, self.output_dir)
             vods = twitch_handler.get_all_videos()
@@ -532,170 +573,245 @@ class NiceShot_AI:
             
             for event in events:
                 writer.writerow(event)
+        self.events_csv.clear()
 
 
     def detect_events(self, progress_bar=None):
         os.makedirs(self.output_dir, exist_ok=True)
+        model = YOLO(self.model_path).to("cuda")
+        trackers = self._init_trackers()
+
+        for video_index, video_path in enumerate(self.video_path, start=1):
+            print(f"Processing video {video_path}")
+            self._process_video(
+                video_path,
+                video_index,
+                model,
+                trackers,
+                progress_bar
+            )
+
         
-        model = YOLO(self.model_path)
+    def _update_progress(self, frame_idx, pbar, progress_bar=None):
+        pbar.update(1)
+
+        if not progress_bar:
+            return
+
+        total = max(self.TOTAL_FRAMES_TO_BE_ANALYZED, 1)
+        progress_bar["value"] = min(100, (frame_idx / total) * 100)
+        progress_bar.update()
+
+
+    def _init_trackers(self):
+        trackers = {
+            "medal": DeepSort(max_age=30, nms_max_overlap=0.6)
+        }
 
         if self.count_kills:
-            kill_tracker = DeepSort(max_age=0)
-        
-        medal_tracker = DeepSort(max_age=30, nms_max_overlap=0.6)
-        
+            trackers["kill"] = DeepSort(max_age=3, n_init=1)
+
         if self.count_deaths:
-            death_tracker = DeepSort(max_age=30)
+            trackers["death"] = DeepSort(max_age=30)
 
-        for i, video_path in enumerate(self.video_path):
-            cap = cv2.VideoCapture(video_path)
-            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            self.fps = cap.get(cv2.CAP_PROP_FPS)
-            video_duration = total_frames/self.fps/60/60
+        return trackers
 
-            if video_duration >= self.total_hours:
-                self.TOTAL_FRAMES_TO_BE_ANALYZED = self.total_hours*60*60*self.fps
 
-            else:
-                self.TOTAL_FRAMES_TO_BE_ANALYZED = video_duration*60*60*self.fps
-            
-            print(f"Total Frames {total_frames}\nFPS {self.fps}\nVideo Duration {video_duration}\nTotal Frames to be analyzed {self.TOTAL_FRAMES_TO_BE_ANALYZED}")
+    def _process_video(self, video_path, video_index, model, trackers, progress_bar):
+        cap = cv2.VideoCapture(video_path)
+        self._init_video_metadata(cap)
 
-            conf_thresholds = {
-                0: 0.6, # Kill
-                1: 0.85, # Medal
-                2: 0.8, # Death
-            }
+        kill_frames, death_frames = [], []
+        temp_ids = {"kill": set(), "medal": set(), "death": set()}
 
+        frames = []
+        inv_frames = []
+
+        with tqdm(total=self.TOTAL_FRAMES_TO_BE_ANALYZED, desc="Processing video") as pbar:
             frame_idx = 0
-            kill_temp = set()
-            medal_temp = set()
-            death_temp = set()
+            while cap.isOpened() and frame_idx < self.TOTAL_FRAMES_TO_BE_ANALYZED:
+                ret, frame = cap.read()
+                if not ret:
+                    break
 
-            kill_frames = []
-            death_frames = []
+                if self._should_process_frame(frame_idx):
+                #     frames.append(frame)
+                #     h, w, _ = frame.shape
+                #     print(h, w)
+                #     upper_quarter = frame[0:270, :]  # height 0-270, all width
 
-            with tqdm(total=self.TOTAL_FRAMES_TO_BE_ANALYZED-frame_idx, desc="Processing video", unit="frame") as pbar:
-                while cap.isOpened():
-                    ret, frame = cap.read()
-                    if not ret or frame_idx >= self.TOTAL_FRAMES_TO_BE_ANALYZED:
-                        break
+                #     # Lower quarter
+                #     lower_quarter = frame[810:1080, :]  # height 810-1080, all width
+
+                #     # Optional: combine crops vertically for batch OCR (depends on OCR library)
+                #     # For PaddleOCR you can feed crops separately
+                #     for crop in [upper_quarter, lower_quarter]:
+
+                # #if len(frames) > 32:
+                #     #for frame in frames:
+                #         if self.is_invalid_event(crop):
+                #             print(f"INVALID FRAME @ IDX : {frame_idx}")
+                #             # inv_frames.append(frame_idx)
+
                     
-                    if frame_idx >= self.frame_idx_start:
-                        if frame_idx >= 0:
-                            if frame_idx % self.frames_to_skip == 0:
-                                results = model(frame, verbose=False)[0]
-                                
-                                kill_detections = []
-                                medal_detections = []
-                                death_detections = []
+                #     frames.clear()
 
-                                for box in results.boxes:
-                                    x1, y1, x2, y2 = box.xyxy[0].tolist()
-                                    conf = box.conf.item()
-                                    cls = int(box.cls.item())
-                                    
-                                    if conf>=conf_thresholds.get(cls) and cls == 0: # KILL
-                                        if self.count_kills:
-                                            if not self.is_invalid_event(frame):
-                                                kill_detections.append(([x1, y1, x2-x1, y2-y1] , conf, cls))
+                    detections = self._collect_detections(model, frame)
+                    tracks = self._update_trackers(trackers, detections, frame)
+                    self._handle_tracks(
+                        tracks,
+                        frame_idx,
+                        video_index,
+                        temp_ids,
+                        kill_frames,
+                        death_frames
+                    )
 
-                                    elif conf>=conf_thresholds.get(cls) and cls == 1: # MEDAL
-                                        if not self.is_invalid_event(frame):
-                                            medal_detections.append(([x1, y1, x2-x1, y2-y1] , conf, cls))
+                self._update_progress(frame_idx, pbar, progress_bar)
+                frame_idx += 1
+        #print(inv_frames)
+        #return
+        self._finalize_video_events(video_index, kill_frames, death_frames)
+        cap.release()
 
-                                    elif conf>=conf_thresholds.get(cls) and cls == 2: # DEATH
-                                        if self.count_deaths:
-                                            death_detections.append(([x1, y1, x2-x1, y2-y1] , conf, cls))
-                                        
-                                if self.count_kills:
-                                    kill_tracks = kill_tracker.update_tracks(kill_detections, frame=frame)
-                                
-                                medal_tracks = medal_tracker.update_tracks(medal_detections, frame=frame)
-                                
-                                if self.count_deaths:
-                                    death_tracks = death_tracker.update_tracks(death_detections, frame=frame)
-                                
-                                if self.count_kills:
-                                    for track in kill_tracks:
-                                        if track.track_id not in kill_temp:
-                                            kill_temp.add(track.track_id)
+        if self.count_kills:
+            self.kills_proc.concat_kill_streaks_new(video_index)
 
-                                            if len(kill_frames) > 0:
-                                                self.finalize_event(kill_frames, i+1, EventType.KILL)
-                                                kill_frames.clear()
-                                                kill_frames.append(frame_idx)
-                                                
-                                        else:
-                                            kill_frames.append(frame_idx)
-                                
-
-                                for track in medal_tracks:
-                                    if track.track_id not in medal_temp:
-                                        medal_temp.add(track.track_id)
-
-                                        if self.add_to_csv and self.count_medals:
-                                            timestamp = time.strftime("%H:%M:%S", time.gmtime(frame_idx/self.fps))
-                                            
-                                            with self.events_csv_lock:
-                                                self.events_csv.append({"Timestamp": timestamp, "Event": "Medal"})
-
-                                if self.count_deaths:
-                                    for track in death_tracks:
-                                        if track.track_id not in death_temp:
-                                            death_temp.add(track.track_id)
-
-                                            if len(death_frames) > 0:
-                                                self.finalize_event(death_frames, i+1, EventType.DEATH)
-                                                death_frames.clear()
-                                                death_frames.append(frame_idx)
-                                                
-                                        else:
-                                            death_frames.append(frame_idx)
-                            
-                    frame_idx += 1
-                    pbar.update(1)
-                    if progress_bar:
-                        progress_bar['value'] = (frame_idx / self.TOTAL_FRAMES_TO_BE_ANALYZED) * 100
-                        progress_bar.update()
-
-                    if len(self.events_csv) >= 100:
-                        self.add_to_csv_(self.csv_file, self.events_csv)
-                        self.events_csv.clear()
-
-                    if len(self.events) >= 10:
-                        self.add_to_json()
-                        self.events.clear()
-
-
-            if len(kill_frames) > 0 and self.count_kills:
-                self.finalize_event(kill_frames, i+1, EventType.KILL)
-                del kill_frames
-
-            if len(death_frames) > 0 and self.count_deaths:
-                self.finalize_event(death_frames, i+1, EventType.DEATH)
-                del death_frames
-                
-            if len(self.events) > 0:
-                self.add_to_json()
-                self.events.clear()
-
-            if self.count_kills:
-                self.kills_proc.concat_kill_streaks_new(i+1)
-
-            cap.release()
-            cv2.destroyAllWindows()
-            print(f"Finished procssing {video_path}\n")
-
-        
-        if self.add_to_csv and len(self.events_csv) > 0:
+        if self.add_to_csv:
             self.add_to_csv_(self.csv_file, self.events_csv)
-            del self.events_csv
-            del self.events
+        
+        if self.save_clips:
+            self._process_clips()
+        
+        if self.save_clips and (self.create_montage or self.montage_length_sec > 0):
+            self._create_montage()
 
-        if self.save_clips:    
-            with open('events_temp_2.json') as f:
-                events = json.load(f)
+
+    def _init_video_metadata(self, cap):
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.fps = cap.get(cv2.CAP_PROP_FPS)
+        duration_hours = total_frames / self.fps / 3600
+
+        max_hours = min(duration_hours, self.total_hours)
+        self.TOTAL_FRAMES_TO_BE_ANALYZED = int(max_hours * 3600 * self.fps)
+        print(f"Total Frames {total_frames}\nFPS {self.fps}\nVideo Duration {duration_hours}\nTotal Frames to be analyzed {self.TOTAL_FRAMES_TO_BE_ANALYZED}")
+
+
+    def _should_process_frame(self, frame_idx):
+        return (
+            frame_idx >= self.frame_idx_start
+            and frame_idx % self.frames_to_skip == 0
+        )
+    
+
+    def _collect_detections(self, model, frame):
+        conf_thresholds = {0: 0.6, 1: 0.85, 2: 0.8}
+        results = model(frame, verbose=False)[0]
+        detections = {"kill": [], "medal": [], "death": []}
+
+        # if self.clip_gate.has_invalid_text(frame):
+            # return detections
+
+        for box in results.boxes:
+            cls = int(box.cls.item())
+            conf = box.conf.item()
+
+            if conf < conf_thresholds.get(cls, 1):
+                continue
+
+            x1, y1, x2, y2 = box.xyxy[0].tolist()
+            bbox = [x1, y1, x2 - x1, y2 - y1]
+
+            if cls == 0 and self.count_kills:
+                #if not self.clip_gate.has_invalid_text(frame):
+                    #print('A kill has been detected')
+                    detections["kill"].append((bbox, conf, cls))
+            elif cls == 1:
+                #if not self.clip_gate.has_invalid_text(frame):
+                    #print('A medal has been detected')
+                    detections["medal"].append((bbox, conf, cls))
+            elif cls == 2 and self.count_deaths:
+                #print('A death has been detected')
+                detections["death"].append((bbox, conf, cls))
+
+        return detections
+
+
+    def _update_trackers(self, trackers, detections, frame):
+        tracks = {}
+
+        for key, tracker in trackers.items():
+            tracks[key] = tracker.update_tracks(detections[key], frame=frame)
+
+        return tracks
+
+
+    def _handle_tracks(
+        self,
+        tracks,
+        frame_idx,
+        video_index,
+        temp_ids,
+        kill_frames,
+        death_frames,
+    ):
+        self._handle_event_tracks(
+            tracks.get("kill", []),
+            temp_ids["kill"],
+            kill_frames,
+            frame_idx,
+            video_index,
+            EventType.KILL
+        )
+
+        self._handle_event_tracks(
+            tracks.get("death", []),
+            temp_ids["death"],
+            death_frames,
+            frame_idx,
+            video_index,
+            EventType.DEATH
+        )
+
+        for track in tracks.get("medal", []):
+            if track.track_id not in temp_ids["medal"]:
+                temp_ids["medal"].add(track.track_id)
+                #self._log_medal(frame_idx)
+
+
+    def _handle_event_tracks(
+        self,
+        tracks,
+        seen_ids,
+        frame_buffer,
+        frame_idx,
+        video_index,
+        event_type
+    ):
+        for track in tracks:
+            if track.track_id not in seen_ids:
+                seen_ids.add(track.track_id)
+                if frame_buffer:
+                    self.finalize_event(frame_buffer, video_index, event_type)
+                    frame_buffer.clear()
+            frame_buffer.append(frame_idx)
+
+
+    def _finalize_video_events(self, video_index, kill_frames, death_frames):
+        if kill_frames and self.count_kills:
+            self.finalize_event(kill_frames, video_index, EventType.KILL)
+
+        if death_frames and self.count_deaths:
+            self.finalize_event(death_frames, video_index, EventType.DEATH)
+
+        if self.events:
+            self.add_to_json()
+            self.events.clear()
+
+
+    def _process_clips(self):
+         with open('events_temp_2.json', 'r') as f:
+            events = json.load(f)
             clip_events = []
             for event in events:
                 video_path = self.video_path[int(event['desc'][-14])-1]
@@ -717,22 +833,24 @@ class NiceShot_AI:
                 self.clip_queue.put(None)
 
             progress_bar.close()
-
-        if (self.create_montage or self.montage_length_sec > 0) and self.count_kills:# and self.save_clips
-            best_kill_clips = self.kills_proc.find_best_kills()
-            #best_kill_clips = [('Clients/Kills/KILLSTREAKin3@00.06.50.mp4', 7), ('Clients/Kills/KILLSTREAKin3@00.38.25.mp4', 4), ('Clients/Kills/KILLin1@00.56.39.mp4', 3), ('Clients/Kills/KILLin3@00.12.12.mp4', 3), ('Clients/Kills/KILLin2@00.09.48.mp4', 2), ('Clients/Kills/KILLin2@00.10.00.mp4', 2), ('Clients/Kills/KILLin2@00.10.43.mp4', 2), ('Clients/Kills/KILLin2@00.24.06.mp4', 2), ('Clients/Kills/KILLin2@00.44.39.mp4', 2), ('Clients/Kills/KILLin2@00.45.03.mp4', 2), ('Clients/Kills/KILLin2@00.53.12.mp4', 2), ('Clients/Kills/KILLin2@00.53.35.mp4', 2), ('Clients/Kills/KILLin3@00.08.29.mp4', 2), ('Clients/Kills/KILLin3@00.30.58.mp4', 2), ('Clients/Kills/KILLin2@00.08.33.mp4', 1), ('Clients/Kills/KILLin2@00.11.29.mp4', 1), ('Clients/Kills/KILLin2@00.11.31.mp4', 1), ('Clients/Kills/KILLin2@00.13.17.mp4', 1), ('Clients/Kills/KILLin2@00.13.32.mp4', 1), ('Clients/Kills/KILLin2@00.14.20.mp4', 1), ('Clients/Kills/KILLin2@00.14.27.mp4', 1), ('Clients/Kills/KILLin2@00.16.30.mp4', 1), ('Clients/Kills/KILLin2@00.16.42.mp4', 1), ('Clients/Kills/KILLin2@00.17.15.mp4', 1), ('Clients/Kills/KILLin2@00.17.40.mp4', 1), ('Clients/Kills/KILLin2@00.22.33.mp4', 1), ('Clients/Kills/KILLin2@00.23.11.mp4', 1), ('Clients/Kills/KILLin2@00.23.23.mp4', 1), ('Clients/Kills/KILLin2@00.23.44.mp4', 1), ('Clients/Kills/KILLin2@00.24.18.mp4', 1), ('Clients/Kills/KILLin2@00.24.20.mp4', 1), ('Clients/Kills/KILLin2@00.24.31.mp4', 1), ('Clients/Kills/KILLin2@00.24.47.mp4', 1), ('Clients/Kills/KILLin2@00.26.36.mp4', 1), ('Clients/Kills/KILLin2@00.27.52.mp4', 1), ('Clients/Kills/KILLin2@00.44.16.mp4', 1), ('Clients/Kills/KILLin2@00.52.53.mp4', 1), ('Clients/Kills/KILLin2@00.56.59.mp4', 1), ('Clients/Kills/KILLin2@00.57.07.mp4', 1), ('Clients/Kills/KILLin2@00.58.21.mp4', 1), ('Clients/Kills/KILLin2@00.58.30.mp4', 1), ('Clients/Kills/KILLin3@00.08.15.mp4', 1), ('Clients/Kills/KILLin3@00.12.21.mp4', 1), ('Clients/Kills/KILLin3@00.23.57.mp4', 1), ('Clients/Kills/KILLSTREAKin3@00.09.29.mp4', 1), ('Clients/Kills/KILLSTREAKin3@00.37.35.mp4', 1), ('Clients/Kills/KILLin1@00.14.42.mp4', 0), ('Clients/Kills/KILLin1@00.15.31.mp4', 0), ('Clients/Kills/KILLin1@00.15.57.mp4', 0), ('Clients/Kills/KILLin1@00.16.16.mp4', 0), ('Clients/Kills/KILLin1@00.17.36.mp4', 0), ('Clients/Kills/KILLin1@00.17.47.mp4', 0), ('Clients/Kills/KILLin1@00.18.04.mp4', 0), ('Clients/Kills/KILLin1@00.18.22.mp4', 0), ('Clients/Kills/KILLin1@00.18.48.mp4', 0), ('Clients/Kills/KILLin1@00.19.36.mp4', 0), ('Clients/Kills/KILLin1@00.19.38.mp4', 0), ('Clients/Kills/KILLin1@00.20.24.mp4', 0), ('Clients/Kills/KILLin1@00.21.56.mp4', 0), ('Clients/Kills/KILLin1@00.22.13.mp4', 0), ('Clients/Kills/KILLin1@00.23.18.mp4', 0), ('Clients/Kills/KILLin1@00.23.28.mp4', 0), ('Clients/Kills/KILLin1@00.23.39.mp4', 0), ('Clients/Kills/KILLin1@00.23.52.mp4', 0), ('Clients/Kills/KILLin1@00.47.42.mp4', 0), ('Clients/Kills/KILLin1@00.53.32.mp4', 0), ('Clients/Kills/KILLin1@00.58.02.mp4', 0), ('Clients/Kills/KILLin1@00.58.18.mp4', 0), ('Clients/Kills/KILLin2@00.08.05.mp4', 0), ('Clients/Kills/KILLin2@00.10.04.mp4', 0), ('Clients/Kills/KILLin2@00.13.02.mp4', 0), ('Clients/Kills/KILLin2@00.17.36.mp4', 0), ('Clients/Kills/KILLin2@00.21.57.mp4', 0), ('Clients/Kills/KILLin2@00.24.00.mp4', 0), ('Clients/Kills/KILLin2@00.25.14.mp4', 0), ('Clients/Kills/KILLin2@00.25.56.mp4', 0), ('Clients/Kills/KILLin2@00.26.09.mp4', 0), ('Clients/Kills/KILLin2@00.27.05.mp4', 0), ('Clients/Kills/KILLin2@00.40.56.mp4', 0), ('Clients/Kills/KILLin2@00.40.57.mp4', 0), ('Clients/Kills/KILLin2@00.41.59.mp4', 0), ('Clients/Kills/KILLin2@00.43.18.mp4', 0), ('Clients/Kills/KILLin2@00.46.27.mp4', 0), ('Clients/Kills/KILLin2@00.46.38.mp4', 0), ('Clients/Kills/KILLin2@00.51.09.mp4', 0), ('Clients/Kills/KILLin2@00.53.30.mp4', 0), ('Clients/Kills/KILLin2@00.54.00.mp4', 0), ('Clients/Kills/KILLin2@00.54.53.mp4', 0), ('Clients/Kills/KILLin2@00.55.38.mp4', 0), ('Clients/Kills/KILLin2@00.56.42.mp4', 0), ('Clients/Kills/KILLin2@00.56.48.mp4', 0), ('Clients/Kills/KILLin2@00.58.01.mp4', 0), ('Clients/Kills/KILLin2@00.58.53.mp4', 0), ('Clients/Kills/KILLin3@00.09.10.mp4', 0), ('Clients/Kills/KILLin3@00.15.10.mp4', 0), ('Clients/Kills/KILLin3@00.21.30.mp4', 0), ('Clients/Kills/KILLin3@00.24.05.mp4', 0), ('Clients/Kills/KILLin3@00.30.05.mp4', 0), ('Clients/Kills/KILLin3@00.32.01.mp4', 0), ('Clients/Kills/KILLin3@00.39.23.mp4', 0), ('Clients/Kills/KILLin3@00.39.31.mp4', 0), ('Clients/Kills/KILLin3@00.42.10.mp4', 0), ('Clients/Kills/KILLin3@00.43.00.mp4', 0), ('Clients/Kills/KILLin3@00.58.41.mp4', 0), ('Clients/Kills/KILLin3@00.59.06.mp4', 0), ('Clients/Kills/KILLin3@00.59.24.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.11.13.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.11.48.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.14.32.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.15.19.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.16.11.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.16.13.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.16.24.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.17.06.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.18.59.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.19.20.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.20.04.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.21.24.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.21.43.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.22.52.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.23.16.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.25.01.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.27.19.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.35.28.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.41.31.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.43.16.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.43.46.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.44.08.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.54.42.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.55.08.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.55.29.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.56.03.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.56.24.mp4', 0)]
-            new_folder = ''.join((self.output_dir, '/best_kill_clips'))
-            os.makedirs(new_folder, exist_ok=True)
-
-            self.kills_proc.move_best_kills_to_folder(best_kill_clips, self.montage_length_sec, new_folder)
-
-            montage = Montage()
-            montage.make_compilation(new_folder, f"{self.output_dir}/highlight_reel.mp4")
-            os.remove('events_temp_2.json')
-            
-            if not self.vertical_format:
-                montage.make_tiktok(f"{self.output_dir}/highlight_reel.mp4", f"{self.output_dir}/highlight_reel_tiktok.mp4")
         
+
+
+    def _create_montage(self):
+        best_kill_clips = self.kills_proc.find_best_kills()
+        #best_kill_clips = [('Clients/Kills/KILLSTREAKin3@00.06.50.mp4', 7), ('Clients/Kills/KILLSTREAKin3@00.38.25.mp4', 4), ('Clients/Kills/KILLin1@00.56.39.mp4', 3), ('Clients/Kills/KILLin3@00.12.12.mp4', 3), ('Clients/Kills/KILLin2@00.09.48.mp4', 2), ('Clients/Kills/KILLin2@00.10.00.mp4', 2), ('Clients/Kills/KILLin2@00.10.43.mp4', 2), ('Clients/Kills/KILLin2@00.24.06.mp4', 2), ('Clients/Kills/KILLin2@00.44.39.mp4', 2), ('Clients/Kills/KILLin2@00.45.03.mp4', 2), ('Clients/Kills/KILLin2@00.53.12.mp4', 2), ('Clients/Kills/KILLin2@00.53.35.mp4', 2), ('Clients/Kills/KILLin3@00.08.29.mp4', 2), ('Clients/Kills/KILLin3@00.30.58.mp4', 2), ('Clients/Kills/KILLin2@00.08.33.mp4', 1), ('Clients/Kills/KILLin2@00.11.29.mp4', 1), ('Clients/Kills/KILLin2@00.11.31.mp4', 1), ('Clients/Kills/KILLin2@00.13.17.mp4', 1), ('Clients/Kills/KILLin2@00.13.32.mp4', 1), ('Clients/Kills/KILLin2@00.14.20.mp4', 1), ('Clients/Kills/KILLin2@00.14.27.mp4', 1), ('Clients/Kills/KILLin2@00.16.30.mp4', 1), ('Clients/Kills/KILLin2@00.16.42.mp4', 1), ('Clients/Kills/KILLin2@00.17.15.mp4', 1), ('Clients/Kills/KILLin2@00.17.40.mp4', 1), ('Clients/Kills/KILLin2@00.22.33.mp4', 1), ('Clients/Kills/KILLin2@00.23.11.mp4', 1), ('Clients/Kills/KILLin2@00.23.23.mp4', 1), ('Clients/Kills/KILLin2@00.23.44.mp4', 1), ('Clients/Kills/KILLin2@00.24.18.mp4', 1), ('Clients/Kills/KILLin2@00.24.20.mp4', 1), ('Clients/Kills/KILLin2@00.24.31.mp4', 1), ('Clients/Kills/KILLin2@00.24.47.mp4', 1), ('Clients/Kills/KILLin2@00.26.36.mp4', 1), ('Clients/Kills/KILLin2@00.27.52.mp4', 1), ('Clients/Kills/KILLin2@00.44.16.mp4', 1), ('Clients/Kills/KILLin2@00.52.53.mp4', 1), ('Clients/Kills/KILLin2@00.56.59.mp4', 1), ('Clients/Kills/KILLin2@00.57.07.mp4', 1), ('Clients/Kills/KILLin2@00.58.21.mp4', 1), ('Clients/Kills/KILLin2@00.58.30.mp4', 1), ('Clients/Kills/KILLin3@00.08.15.mp4', 1), ('Clients/Kills/KILLin3@00.12.21.mp4', 1), ('Clients/Kills/KILLin3@00.23.57.mp4', 1), ('Clients/Kills/KILLSTREAKin3@00.09.29.mp4', 1), ('Clients/Kills/KILLSTREAKin3@00.37.35.mp4', 1), ('Clients/Kills/KILLin1@00.14.42.mp4', 0), ('Clients/Kills/KILLin1@00.15.31.mp4', 0), ('Clients/Kills/KILLin1@00.15.57.mp4', 0), ('Clients/Kills/KILLin1@00.16.16.mp4', 0), ('Clients/Kills/KILLin1@00.17.36.mp4', 0), ('Clients/Kills/KILLin1@00.17.47.mp4', 0), ('Clients/Kills/KILLin1@00.18.04.mp4', 0), ('Clients/Kills/KILLin1@00.18.22.mp4', 0), ('Clients/Kills/KILLin1@00.18.48.mp4', 0), ('Clients/Kills/KILLin1@00.19.36.mp4', 0), ('Clients/Kills/KILLin1@00.19.38.mp4', 0), ('Clients/Kills/KILLin1@00.20.24.mp4', 0), ('Clients/Kills/KILLin1@00.21.56.mp4', 0), ('Clients/Kills/KILLin1@00.22.13.mp4', 0), ('Clients/Kills/KILLin1@00.23.18.mp4', 0), ('Clients/Kills/KILLin1@00.23.28.mp4', 0), ('Clients/Kills/KILLin1@00.23.39.mp4', 0), ('Clients/Kills/KILLin1@00.23.52.mp4', 0), ('Clients/Kills/KILLin1@00.47.42.mp4', 0), ('Clients/Kills/KILLin1@00.53.32.mp4', 0), ('Clients/Kills/KILLin1@00.58.02.mp4', 0), ('Clients/Kills/KILLin1@00.58.18.mp4', 0), ('Clients/Kills/KILLin2@00.08.05.mp4', 0), ('Clients/Kills/KILLin2@00.10.04.mp4', 0), ('Clients/Kills/KILLin2@00.13.02.mp4', 0), ('Clients/Kills/KILLin2@00.17.36.mp4', 0), ('Clients/Kills/KILLin2@00.21.57.mp4', 0), ('Clients/Kills/KILLin2@00.24.00.mp4', 0), ('Clients/Kills/KILLin2@00.25.14.mp4', 0), ('Clients/Kills/KILLin2@00.25.56.mp4', 0), ('Clients/Kills/KILLin2@00.26.09.mp4', 0), ('Clients/Kills/KILLin2@00.27.05.mp4', 0), ('Clients/Kills/KILLin2@00.40.56.mp4', 0), ('Clients/Kills/KILLin2@00.40.57.mp4', 0), ('Clients/Kills/KILLin2@00.41.59.mp4', 0), ('Clients/Kills/KILLin2@00.43.18.mp4', 0), ('Clients/Kills/KILLin2@00.46.27.mp4', 0), ('Clients/Kills/KILLin2@00.46.38.mp4', 0), ('Clients/Kills/KILLin2@00.51.09.mp4', 0), ('Clients/Kills/KILLin2@00.53.30.mp4', 0), ('Clients/Kills/KILLin2@00.54.00.mp4', 0), ('Clients/Kills/KILLin2@00.54.53.mp4', 0), ('Clients/Kills/KILLin2@00.55.38.mp4', 0), ('Clients/Kills/KILLin2@00.56.42.mp4', 0), ('Clients/Kills/KILLin2@00.56.48.mp4', 0), ('Clients/Kills/KILLin2@00.58.01.mp4', 0), ('Clients/Kills/KILLin2@00.58.53.mp4', 0), ('Clients/Kills/KILLin3@00.09.10.mp4', 0), ('Clients/Kills/KILLin3@00.15.10.mp4', 0), ('Clients/Kills/KILLin3@00.21.30.mp4', 0), ('Clients/Kills/KILLin3@00.24.05.mp4', 0), ('Clients/Kills/KILLin3@00.30.05.mp4', 0), ('Clients/Kills/KILLin3@00.32.01.mp4', 0), ('Clients/Kills/KILLin3@00.39.23.mp4', 0), ('Clients/Kills/KILLin3@00.39.31.mp4', 0), ('Clients/Kills/KILLin3@00.42.10.mp4', 0), ('Clients/Kills/KILLin3@00.43.00.mp4', 0), ('Clients/Kills/KILLin3@00.58.41.mp4', 0), ('Clients/Kills/KILLin3@00.59.06.mp4', 0), ('Clients/Kills/KILLin3@00.59.24.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.11.13.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.11.48.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.14.32.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.15.19.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.16.11.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.16.13.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.16.24.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.17.06.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.18.59.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.19.20.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.20.04.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.21.24.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.21.43.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.22.52.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.23.16.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.25.01.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.27.19.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.35.28.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.41.31.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.43.16.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.43.46.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.44.08.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.54.42.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.55.08.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.55.29.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.56.03.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.56.24.mp4', 0)]
+        new_folder = ''.join((self.output_dir, '/best_kill_clips'))
+        os.makedirs(new_folder, exist_ok=True)
+
+        self.kills_proc.move_best_kills_to_folder(best_kill_clips, self.montage_length_sec, new_folder)
+        montage = Montage()
+        montage.make_compilation(new_folder, f"{self.output_dir}/highlight_reel.mp4")
+        os.remove('events_temp_2.json')
+        
+        if not self.vertical_format:
+            montage.make_tiktok(f"{self.output_dir}/highlight_reel.mp4", f"{self.output_dir}/highlight_reel_tiktok.mp4")
+        
+
 
     def find_event_frames(self, event_frames, event_type: EventType):
         seconds_before = self.seconds_before_kill
@@ -754,17 +872,45 @@ class NiceShot_AI:
         return starting_frame/60, ending_frame/60
 
 
-    def extract_text(self, frame):
+    def extract_text(self, frames):
         #x, y, w, h = region
         #cropped = frame[y:y+h, x:x+w]
         #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        text = self.ocr(frame)
-        text = ''.join([word for word in text.txts])
-        return text
+        text = []
+        #gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        #result = self.ocr(frames)
+        #frame = Image.fromarray(frame)
+
+        # SURYA OCR
+        # predictions = self.recognition_predictor(
+        #     frames, det_predictor=self.detection_predictor, detection_batch_size=32)
+        # for line in predictions[0].text_lines:
+        #     text.append(line.text)
+
+        # PADDLE PCR
+        # result = self.ocr.predict(frames)
+        # for detection in result:
+        #     text.extend(detection['rec_texts'])
+        # text = ''.join([word for word in text.txts])
+        # text.extend(list(result.txts))
+
+        # EASY OCR
+        # result = self.ocr.readtext(frames)
+        # for detection in result:
+        #     text.append(detection[1])
+            #print(detection[1])
+
+        #texts = ''.join(texts)
+
+        # Rapid OCR
+        results = self.ocr(frames)
+        text.extend(list(results.txts))
+        
+        return ''.join(text)
 
 
-    def is_invalid_event(self, frame):
-        killcam_text = self.extract_text(frame)
+    def is_invalid_event(self, frames):
+        killcam_text = self.extract_text(frames)
 
         words = ("KILLCAM", "KILLGAM", "BESTPLAY", "SPECTATING:", "FINAL KILL", "BEST PLAY")
         for word in words:
@@ -775,8 +921,11 @@ class NiceShot_AI:
 
     def add_to_json(self):
         if os.path.exists(self.filename):
-            with open(self.filename, "r") as f:
-                data = json.load(f)
+            try:
+                with open(self.filename, "r") as f:
+                    data = json.load(f)
+            except:
+                data = []
         else:
             data = []
 
@@ -817,7 +966,7 @@ class TwitchHandler:
         options.add_argument("--disable-gpu")
         driver = webdriver.Chrome(options=options)
         driver.get(f"{self.channel_link}/videos?filter=all&sort=time")
-        desired_game = "Call of Duty: Black Ops 6"
+        desired_game = "Call of Duty: Black Ops 7"
         video_urls = set()
         last_height = driver.execute_script("return document.body.scrollHeight")
         
