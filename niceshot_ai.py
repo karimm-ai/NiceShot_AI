@@ -8,12 +8,12 @@ from tqdm import tqdm
 import logging
 from queue import Queue
 import csv, time, json, shutil
-from rapidocr import RapidOCR
-from paddleocr import PaddleOCR
-import easyocr
-from surya.foundation import FoundationPredictor
-from surya.recognition import RecognitionPredictor
-from surya.detection import DetectionPredictor
+#from rapidocr import RapidOCR
+#from paddleocr import PaddleOCR
+#import easyocr
+#from surya.foundation import FoundationPredictor
+#from surya.recognition import RecognitionPredictor
+#from surya.detection import DetectionPredictor
 from PIL import Image
 
 from enum import Enum, auto
@@ -501,7 +501,7 @@ class NiceShot_AI:
         self.ffmpeg_path = self.resource_path(ffmpeg_path)
         print(self.ffmpeg_path)
         
-        self.ocr = RapidOCR()
+        #self.ocr = RapidOCR()
         #self.ocr = PaddleOCR()
         #self.ocr = easyocr.Reader(['en'], gpu=True)
         # self.foundation_predictor = FoundationPredictor()
@@ -835,7 +835,6 @@ class NiceShot_AI:
             progress_bar.close()
         
 
-
     def _create_montage(self):
         best_kill_clips = self.kills_proc.find_best_kills()
         #best_kill_clips = [('Clients/Kills/KILLSTREAKin3@00.06.50.mp4', 7), ('Clients/Kills/KILLSTREAKin3@00.38.25.mp4', 4), ('Clients/Kills/KILLin1@00.56.39.mp4', 3), ('Clients/Kills/KILLin3@00.12.12.mp4', 3), ('Clients/Kills/KILLin2@00.09.48.mp4', 2), ('Clients/Kills/KILLin2@00.10.00.mp4', 2), ('Clients/Kills/KILLin2@00.10.43.mp4', 2), ('Clients/Kills/KILLin2@00.24.06.mp4', 2), ('Clients/Kills/KILLin2@00.44.39.mp4', 2), ('Clients/Kills/KILLin2@00.45.03.mp4', 2), ('Clients/Kills/KILLin2@00.53.12.mp4', 2), ('Clients/Kills/KILLin2@00.53.35.mp4', 2), ('Clients/Kills/KILLin3@00.08.29.mp4', 2), ('Clients/Kills/KILLin3@00.30.58.mp4', 2), ('Clients/Kills/KILLin2@00.08.33.mp4', 1), ('Clients/Kills/KILLin2@00.11.29.mp4', 1), ('Clients/Kills/KILLin2@00.11.31.mp4', 1), ('Clients/Kills/KILLin2@00.13.17.mp4', 1), ('Clients/Kills/KILLin2@00.13.32.mp4', 1), ('Clients/Kills/KILLin2@00.14.20.mp4', 1), ('Clients/Kills/KILLin2@00.14.27.mp4', 1), ('Clients/Kills/KILLin2@00.16.30.mp4', 1), ('Clients/Kills/KILLin2@00.16.42.mp4', 1), ('Clients/Kills/KILLin2@00.17.15.mp4', 1), ('Clients/Kills/KILLin2@00.17.40.mp4', 1), ('Clients/Kills/KILLin2@00.22.33.mp4', 1), ('Clients/Kills/KILLin2@00.23.11.mp4', 1), ('Clients/Kills/KILLin2@00.23.23.mp4', 1), ('Clients/Kills/KILLin2@00.23.44.mp4', 1), ('Clients/Kills/KILLin2@00.24.18.mp4', 1), ('Clients/Kills/KILLin2@00.24.20.mp4', 1), ('Clients/Kills/KILLin2@00.24.31.mp4', 1), ('Clients/Kills/KILLin2@00.24.47.mp4', 1), ('Clients/Kills/KILLin2@00.26.36.mp4', 1), ('Clients/Kills/KILLin2@00.27.52.mp4', 1), ('Clients/Kills/KILLin2@00.44.16.mp4', 1), ('Clients/Kills/KILLin2@00.52.53.mp4', 1), ('Clients/Kills/KILLin2@00.56.59.mp4', 1), ('Clients/Kills/KILLin2@00.57.07.mp4', 1), ('Clients/Kills/KILLin2@00.58.21.mp4', 1), ('Clients/Kills/KILLin2@00.58.30.mp4', 1), ('Clients/Kills/KILLin3@00.08.15.mp4', 1), ('Clients/Kills/KILLin3@00.12.21.mp4', 1), ('Clients/Kills/KILLin3@00.23.57.mp4', 1), ('Clients/Kills/KILLSTREAKin3@00.09.29.mp4', 1), ('Clients/Kills/KILLSTREAKin3@00.37.35.mp4', 1), ('Clients/Kills/KILLin1@00.14.42.mp4', 0), ('Clients/Kills/KILLin1@00.15.31.mp4', 0), ('Clients/Kills/KILLin1@00.15.57.mp4', 0), ('Clients/Kills/KILLin1@00.16.16.mp4', 0), ('Clients/Kills/KILLin1@00.17.36.mp4', 0), ('Clients/Kills/KILLin1@00.17.47.mp4', 0), ('Clients/Kills/KILLin1@00.18.04.mp4', 0), ('Clients/Kills/KILLin1@00.18.22.mp4', 0), ('Clients/Kills/KILLin1@00.18.48.mp4', 0), ('Clients/Kills/KILLin1@00.19.36.mp4', 0), ('Clients/Kills/KILLin1@00.19.38.mp4', 0), ('Clients/Kills/KILLin1@00.20.24.mp4', 0), ('Clients/Kills/KILLin1@00.21.56.mp4', 0), ('Clients/Kills/KILLin1@00.22.13.mp4', 0), ('Clients/Kills/KILLin1@00.23.18.mp4', 0), ('Clients/Kills/KILLin1@00.23.28.mp4', 0), ('Clients/Kills/KILLin1@00.23.39.mp4', 0), ('Clients/Kills/KILLin1@00.23.52.mp4', 0), ('Clients/Kills/KILLin1@00.47.42.mp4', 0), ('Clients/Kills/KILLin1@00.53.32.mp4', 0), ('Clients/Kills/KILLin1@00.58.02.mp4', 0), ('Clients/Kills/KILLin1@00.58.18.mp4', 0), ('Clients/Kills/KILLin2@00.08.05.mp4', 0), ('Clients/Kills/KILLin2@00.10.04.mp4', 0), ('Clients/Kills/KILLin2@00.13.02.mp4', 0), ('Clients/Kills/KILLin2@00.17.36.mp4', 0), ('Clients/Kills/KILLin2@00.21.57.mp4', 0), ('Clients/Kills/KILLin2@00.24.00.mp4', 0), ('Clients/Kills/KILLin2@00.25.14.mp4', 0), ('Clients/Kills/KILLin2@00.25.56.mp4', 0), ('Clients/Kills/KILLin2@00.26.09.mp4', 0), ('Clients/Kills/KILLin2@00.27.05.mp4', 0), ('Clients/Kills/KILLin2@00.40.56.mp4', 0), ('Clients/Kills/KILLin2@00.40.57.mp4', 0), ('Clients/Kills/KILLin2@00.41.59.mp4', 0), ('Clients/Kills/KILLin2@00.43.18.mp4', 0), ('Clients/Kills/KILLin2@00.46.27.mp4', 0), ('Clients/Kills/KILLin2@00.46.38.mp4', 0), ('Clients/Kills/KILLin2@00.51.09.mp4', 0), ('Clients/Kills/KILLin2@00.53.30.mp4', 0), ('Clients/Kills/KILLin2@00.54.00.mp4', 0), ('Clients/Kills/KILLin2@00.54.53.mp4', 0), ('Clients/Kills/KILLin2@00.55.38.mp4', 0), ('Clients/Kills/KILLin2@00.56.42.mp4', 0), ('Clients/Kills/KILLin2@00.56.48.mp4', 0), ('Clients/Kills/KILLin2@00.58.01.mp4', 0), ('Clients/Kills/KILLin2@00.58.53.mp4', 0), ('Clients/Kills/KILLin3@00.09.10.mp4', 0), ('Clients/Kills/KILLin3@00.15.10.mp4', 0), ('Clients/Kills/KILLin3@00.21.30.mp4', 0), ('Clients/Kills/KILLin3@00.24.05.mp4', 0), ('Clients/Kills/KILLin3@00.30.05.mp4', 0), ('Clients/Kills/KILLin3@00.32.01.mp4', 0), ('Clients/Kills/KILLin3@00.39.23.mp4', 0), ('Clients/Kills/KILLin3@00.39.31.mp4', 0), ('Clients/Kills/KILLin3@00.42.10.mp4', 0), ('Clients/Kills/KILLin3@00.43.00.mp4', 0), ('Clients/Kills/KILLin3@00.58.41.mp4', 0), ('Clients/Kills/KILLin3@00.59.06.mp4', 0), ('Clients/Kills/KILLin3@00.59.24.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.11.13.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.11.48.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.14.32.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.15.19.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.16.11.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.16.13.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.16.24.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.17.06.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.18.59.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.19.20.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.20.04.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.21.24.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.21.43.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.22.52.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.23.16.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.25.01.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.27.19.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.35.28.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.41.31.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.43.16.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.43.46.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.44.08.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.54.42.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.55.08.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.55.29.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.56.03.mp4', 0), ('Clients/Kills/KILLSTREAKin3@00.56.24.mp4', 0)]
@@ -850,7 +849,6 @@ class NiceShot_AI:
         if not self.vertical_format:
             montage.make_tiktok(f"{self.output_dir}/highlight_reel.mp4", f"{self.output_dir}/highlight_reel_tiktok.mp4")
         
-
 
     def find_event_frames(self, event_frames, event_type: EventType):
         seconds_before = self.seconds_before_kill
@@ -903,10 +901,10 @@ class NiceShot_AI:
         #texts = ''.join(texts)
 
         # Rapid OCR
-        results = self.ocr(frames)
-        text.extend(list(results.txts))
+        # results = self.ocr(frames)
+        # text.extend(list(results.txts))
         
-        return ''.join(text)
+        # return ''.join(text)
 
 
     def is_invalid_event(self, frames):
