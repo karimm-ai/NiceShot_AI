@@ -29,12 +29,13 @@ YOLOv8n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned
 - **Generating Kills Highlight Reel**: Concatenating best or all extracted kill clips into one video with simple fade in & out transitions between clips in both vertical & horizontal formats.
 - **Analyzing BO6 videos in bulk from a Twitch channel**: Downloads and analyzes CoD BO6 streams from a Twitch channel performing bulk analysis of gameplay videos.
 - **Events Timestamping & CSV Output**: Timestamps detected events and dumps into a CSV file with 2 columns [Timestamp, Event] for further gameplay data analysis and inspections.
+![Project Screenshot Done in PowerBI](cod_report.png)
 
 ---
 
 ### **Advanced Tool Features**
 
-- **Accurate Event Clipping**: Using RapidOCR to avoid counting frames of KILLCAMS and SPECTATING.
+- **Accurate Event Clipping**: Using EasyOCR to avoid counting frames of KILLCAMS and SPECTATING.
 - **Custom Montage Lengths**: Allowing for creating compilations of any length.
 
 ---
@@ -48,7 +49,7 @@ Create a Python virtual environment (optional, but recommended):
 
 ```bash
 python -m venv venv
-source venv/bin/activate   # On Windows use `venv\Scripts\activate`
+venv\Scripts\activate
 ```
 
 Install torch cuda. What worked for me is cuda 12.1:
@@ -65,13 +66,12 @@ pip install -r requirements.txt
 
 ### **Run the tool**
 ```
-from niceshot_ai import NiceShot_AI
+from src.niceshot_ai.detector import EventDetector
 
-niceshot = NiceShot_AI('yolov8n-cod_bo6.pt', # YOLO Model Path
-                        'ffmpeg-win-x86_64-v7.1.exe', # FFMPEG Path (You can find it where you installed FFMPEG. Can also be 'ffmpeg.exe')
+detector = NiceShot_AI('yolov8n-cod_bo6.pt', # YOLO Model Path
+                        'ffmpeg.exe', # FFMPEG Path (You can find it where you installed FFMPEG)
                         "https://www.twitch.tv/your_channel", # CoD BO6 gameplay video or Twitch Channel Link
-                        seconds_before_kill=2, # Seconds before kill to include when a kill event is detected (for clipping)
-                        seconds_before_death=1, # Seconds before death to include when a death event is detected (for clipping)
+                        events_to_detect=['Kill', 'Medal', 'Death']
                         total_hours=0.5, # Total hours to analyze of the video (each video in case analyzing a Twitch Channel)
                         save_clips=True, # Save clips locally
                         add_to_csv=True, # Add events and timestamps to a CSV file.
@@ -82,9 +82,10 @@ niceshot = NiceShot_AI('yolov8n-cod_bo6.pt', # YOLO Model Path
                         create_montage=True, # Create a highlight reel of kills
                         max_workers=4, # Default
                         max_videos=3, # Only useful if passing a Twitch channel as it gets the most recent specified number of videos
-                        montage_length_sec=50) # Total duration of the generated highlight reel in seconds
+                        montage_length_sec=50, # Total duration of the generated highlight reel in seconds
+                        advanced_detection=True) # To enable OCR to confirm events
 
-niceshot.detect_events()
+detector.detect_events()
 ```
 
 ---
