@@ -22,13 +22,20 @@ YOLOv8n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned
 
 ### **Tool Features**
 
-- **Event Clipping**: Clipping kill & death events from the gameplay video.
+- **Event Auto-Clipping**: Clipping kill & death events from the CoD gameplay video.
 - **Clipping Kill Streaks**: Clipping multiple consecutive kills during gameplay by concatenating all unique kills detections within time threshold between each detection and the following.
 - **Extracting Best Kill Clips**: Extracting hot kill clips where multiple medals pop up during the event.
 - **Clips Export in 16:9 & TikTok formats**
-- **Generating Kills Highlight Reel**: Concatenating best or all extracted kill clips into one video with simple fade in & out transitions between clips in both vertical & horizontal formats.
+- **Generating Kills Highlight Reel**: Concatenating best or all extracted kill clips into one video with simple fade in & out transition edits between clips in both vertical & horizontal formats.
 - **Analyzing BO6 videos in bulk from a Twitch channel**: Downloads and analyzes CoD BO6 streams from a Twitch channel performing bulk analysis of gameplay videos.
+
+---
+
+### **Session Analysis**
+
 - **Events Timestamping & CSV Output**: Timestamps detected events and dumps into a CSV file with 2 columns [Timestamp, Event] for further gameplay data analysis and inspections.
+
+An analysis report prepared in PowerBI, from the ".csv" data file, by creating DAX measures to calculate relevant statistics.
 
 ![Project Screenshot Done in PowerBI](cod_report.png)
 
@@ -38,6 +45,13 @@ YOLOv8n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned
 
 - **Accurate Event Clipping**: Using EasyOCR to avoid counting frames of KILLCAMS and SPECTATING.
 - **Custom Montage Lengths**: Allowing for creating compilations of any length.
+
+---
+
+### **Limitations**
+
+- **An event may get detected more than one time or not detected at all**: From my testing, an event getting detected more than once is more likely than not getting detected at all which means more tuning should be done on the tracker algorithm.
+- **Special kill events are not detected**: Model is not trained on detecting player's "grenade kill", "mine/trap kill", etc. Just face to face gun kills are counted.
 
 ---
 
@@ -88,5 +102,30 @@ detector = NiceShot_AI('yolov8n-cod_bo6.pt', # YOLO Model Path
 
 detector.detect_events()
 ```
+
+---
+
+### **Processing Speed**
+
+Tested on my new laptop with the following specs:
+- **CPU**: core i9 14th gen
+- **GPU**: RTX5070 8GB
+- **RAM**: 32GB
+
+Tested on my old laptop with the following specs:
+- **CPU**: core i7 10th gen
+- **GPU**: GTX1650 4GB
+- **RAM**: 16GB
+
+
+|  Column 1   | Frame Inference |
+|-------------|-----------------|
+| New laptop  |  Up to 170 FPS  |
+| Old laptop  |  Up to 60 FPS   |
+
+
+##### **Advanced Detection with OCR**
+
+This is run only to confirm an event after it's detected. Not through the whole video frames. It can cause the processing speed to fall from 170 FPS to 30 FPS (on new laptop) temporarily until event is confirmed. It can definitely be turned off, however this will cause a kill event during "SPECTATING" to be counted.
 
 ---
