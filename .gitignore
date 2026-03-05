@@ -54,6 +54,7 @@ test*
 # Translations
 *.mo
 *.pot
+EXTRAS
 
 # Django stuff:
 *.log
@@ -212,3 +213,4 @@ __marimo__/
 # Extra Files
 full_app.py
 gui.py
+*.json
