@@ -29,6 +29,7 @@ YOLOv8n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned
 - **Generating Kills Highlight Reel**: Concatenating best or all extracted kill clips into one video with simple fade in & out transitions between clips in both vertical & horizontal formats.
 - **Analyzing BO6 videos in bulk from a Twitch channel**: Downloads and analyzes CoD BO6 streams from a Twitch channel performing bulk analysis of gameplay videos.
 - **Events Timestamping & CSV Output**: Timestamps detected events and dumps into a CSV file with 2 columns [Timestamp, Event] for further gameplay data analysis and inspections.
+
 ![Project Screenshot Done in PowerBI](cod_report.png)
 
 ---
