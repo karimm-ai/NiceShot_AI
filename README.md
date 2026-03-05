@@ -124,7 +124,7 @@ Tested on my old laptop with the following specs:
 | Old laptop  |  Up to 60 FPS   |
 
 
-##### **Advanced Detection with OCR**
+#### **Advanced Detection with OCR**
 
 This is run only to confirm an event after it's detected. Not through the whole video frames. It can cause the processing speed to fall from 170 FPS to 30 FPS (on new laptop) temporarily until event is confirmed. It can definitely be turned off, however this will cause a kill event during "SPECTATING" to be counted.
 
