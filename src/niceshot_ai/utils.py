@@ -1,7 +1,7 @@
 import json, subprocess, os, csv, sys
-import numpy as np
 
-def get_duration(clip_path):
+
+def get_duration(clip_path: str) -> float:
     """Returns the duration of a video using ffprobe"""
 
     cmd = [
@@ -17,7 +17,7 @@ def get_duration(clip_path):
     return float(info['format']['duration'])
 
 
-def add_to_csv_(output_dir, filename, events):
+def add_to_csv_(output_dir: str, filename: str, events: list):
         output_filename = os.path.join(output_dir, filename)
         fieldnames = ["Timestamp", "Event"]
         
@@ -31,13 +31,13 @@ def add_to_csv_(output_dir, filename, events):
                 writer.writerow(event)
 
 
-def resource_path(filename):
+def resource_path(filename: str) -> str:
     if getattr(sys, 'frozen', False):
         return os.path.join(sys._MEIPASS, filename)
     return filename
 
 
-def add_to_json(filename, events):
+def add_to_json(filename: str, events: list):
         if os.path.exists(filename):
             try:
                 with open(filename, "r") as f:

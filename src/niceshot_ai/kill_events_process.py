@@ -1,5 +1,5 @@
 from .utils import get_duration
-from .event_types import Event, EventType
+from .event_types import Event
 
 import json, os
 import cv2
@@ -11,27 +11,28 @@ import shutil
 class KillEventsProcessor:
     """Finds top kill clips and kill streaks"""
 
-    def __init__(self, model_path, output_dir):
+    def __init__(self, model_path: str, output_dir: str):
         self.model_path = model_path
         self.output_dir = output_dir
 
 
-    def find_best_kills(self):
+    def find_best_kills(self) -> dict:
         """Kill clips where a lot of medals pop up"""
 
         print("Extracting Best clips\n")
 
-        model = YOLO(self.model_path)
-        #model.to('cuda')
+        model = YOLO(self.model_path).to("cuda")
         medal_tracker = DeepSort(max_age=30)
         clips_medals = {}
+        kill_directories = [f"{self.output_dir}/Kill", f"{self.output_dir}/KillStreak"]
         
-        for clip in os.listdir(f"{self.output_dir}/Kills"):
-            if clip.endswith("mp4"):
-                clips_medals[f"{self.output_dir}/Kills/{clip}"] = 0
-        
-        conf_threshold = 0.85
-        temp = set()
+        for dir in kill_directories:
+            for clip in os.listdir(dir):
+                if clip.endswith("mp4"):
+                    clips_medals[f"{dir}/{clip}"] = 0
+            
+            conf_threshold = 0.85
+            temp = set()
         
         for key, _ in clips_medals.items():
             cap = cv2.VideoCapture(key)
@@ -64,31 +65,12 @@ class KillEventsProcessor:
                     pbar.update(1)
             
             cap.release()
-            #cv2.destroyAllWindows()
 
-        sorted_clips_medals= sorted(clips_medals.items(), key=lambda item: item[1], reverse=True)
-        print(sorted_clips_medals)
+        sorted_clips_medals = sorted(clips_medals.items(), key=lambda item: item[1], reverse=True)
         return sorted_clips_medals
-
-
-    def concat_temp_clips(self, clips_to_concat, output_file):
-        # Create a text file with the list of input files
-        #with open('file_list.txt', 'w') as file:
-            #for clip, time in clips_to_concat:
-                #file.write(f"file '{self.output_dir}/Kills/{clip}'\n")
-
-        # Run FFmpeg to concatenate the videos
-        #subprocess.run(['ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'file_list.txt', '-c', 'copy', output_file])
-        # Clean up the temporary file list
-        self.extract_segment(f"{self.output_dir}", 
-                             round(clips_to_concat['time'][0]), 
-                             round(clips_to_concat['time'][-1])+self.seconds_after_kill*2, 
-                             output_file)
-        #os.remove('file_list.txt')
-        print(f"Found a kill streak. Videos concatenated successfully into {output_file}")
     
 
-    def move_best_kills_to_folder(self, best_kills, montage_length, new_folder):
+    def move_best_kills_to_folder(self, best_kills: dict, montage_length: int, new_folder: str):
         print(f"Moving best clips to {self.output_dir}/{new_folder}\n")
         final_clips = []
         current_length = 0
@@ -104,7 +86,7 @@ class KillEventsProcessor:
             shutil.copy(clip, new_folder)
 
 
-    def concat_kill_streaks_new(self, video_num):
+    def concat_kill_streaks(self, video_num: int):
         with open('events_temp.json', 'r') as f:
             events = json.load(f)
         
@@ -114,7 +96,7 @@ class KillEventsProcessor:
         temp_events = []
 
         for event in events:
-            if event["type"] != "KILL":
+            if event["type"] != "Kill":
                 # reset streak if any non-KILL occurs
                 if current_streak:
                     kill_streaks.append(current_streak)
@@ -144,7 +126,7 @@ class KillEventsProcessor:
         merged = []
         for streak in kill_streaks:
             if len(streak) > 1:
-                merged.append(Event(EventType.KILLSTREAK,
+                merged.append(Event("KillStreak",
                     streak[0]["timestart"],
                     streak[-1]["timeend"], video_num))
 
@@ -156,5 +138,3 @@ class KillEventsProcessor:
 
         with open('events_temp_2.json', 'w') as f:
             json.dump(merged, f, indent=2)
-        
-        #os.remove('events_temp.json')

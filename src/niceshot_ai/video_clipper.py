@@ -1,9 +1,10 @@
 import subprocess, os
 
+
 class Clipper:
     """Clipper class for clipping segments from a video path"""
 
-    def __init__(self, ffmpeg_path, vertical_format):
+    def __init__(self, ffmpeg_path: str, vertical_format: bool):
         self.ffmpeg_path = ffmpeg_path
         self.vertical_format = vertical_format
         self.crop_width = 608
@@ -12,7 +13,7 @@ class Clipper:
         self.y_offset = "(in_h - {0})/2".format(self.crop_height)
 
 
-    def clip_event(self, output_dir: str, event, video_path):  
+    def clip_event(self, output_dir: str, event: dict, video_path: str):
         output_path = os.path.join(output_dir, event['desc'])
 
         if not self.vertical_format:

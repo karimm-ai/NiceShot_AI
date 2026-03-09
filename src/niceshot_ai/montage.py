@@ -1,4 +1,5 @@
 from .utils import get_duration
+
 import os, subprocess
 
 
@@ -8,8 +9,8 @@ class Montage:
     def __init__(self,):
         pass
    
-
-    def make_compilation(self, input_folder, output_file, fade_duration=0.5):
+   
+    def make_compilation(self, input_folder: str, output_file: str, fade_duration: float = 0.5):
         print("Creating Montage...\n")
         clips = sorted([f for f in os.listdir(input_folder) if f.endswith('.mp4')])
         if not clips:
@@ -67,7 +68,7 @@ class Montage:
             print(f"❌ FFmpeg error: {e}")
 
 
-    def make_tiktok(self, video_path, output_path):
+    def make_tiktok(self, video_path: str, output_path: str):
         # Crop width and height for center vertical slice
         crop_width = 608
         crop_height = 1080

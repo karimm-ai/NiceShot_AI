@@ -1,11 +1,14 @@
 import easyocr
 import numpy as np
 
+
 class EventConfirm:
+
     def __init__(self):
         self.ocr = easyocr.Reader(['en'], gpu=True)
 
-    def extract_text(self, frame):
+
+    def extract_text(self, frame: np.ndarray) -> str:
         texts = []
 
         detected_text_regions = self.ocr.detect(frame)[0]
@@ -15,7 +18,7 @@ class EventConfirm:
         return ''.join(texts)
 
 
-    def is_invalid_event(self, frame):
+    def is_invalid_event(self, frame: np.ndarray) -> bool:
         frame = self.crop_frame(frame)
         killcam_text = self.extract_text(frame)
 
@@ -26,7 +29,7 @@ class EventConfirm:
         return False
     
 
-    def crop_frame(self, frame):
+    def crop_frame(self, frame: np.ndarray) -> np.ndarray:
         h, w = frame.shape[:2]
 
         top_part = frame[:int(0.3*h), :]
