@@ -17,8 +17,8 @@ cod_bo6_config = {
 
     "Death": {"pre": 2,
               "post": 1,
-              'tracker': DeepSort(max_age=30),
+              'tracker': DeepSort(max_age=10, max_cosine_distance=1),
               'cls_label': 2,
-              'conf_thres': 0.8,
+              'conf_thres': 0.85,
               'clip_eligible': True}
 }
