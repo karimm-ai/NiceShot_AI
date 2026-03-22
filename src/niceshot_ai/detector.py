@@ -3,9 +3,11 @@ from .video_clipper import Clipper
 from .kill_events_process import KillEventsProcessor
 from .event_types import Event
 from .montage import Montage
-from .utils import add_to_csv_, resource_path, add_to_json
+from .utils import add_to_csv_, resource_path, add_to_json, move_clips_to_folder
 from .events_config import cod_bo6_config
+from .charts_config import cod_bo6_chart_config
 from .event_confirm import EventConfirm
+from .report import ReportMaker
 
 import cv2
 from ultralytics import YOLO
@@ -20,12 +22,14 @@ import numpy
 class EventDetector:
     """Main Class for detecting events"""
 
-    def __init__(self, model_path: str,
+    def __init__(self,
+                 game_name: str,
+                 model_path: str,
                  ffmpeg_path: str,
                  video_path: str,
                  events_config: dict = cod_bo6_config,
-                 csv_file: str = None,
-                 total_hours: float = 10,
+                 report_config: list | None = cod_bo6_chart_config,
+                 total_hours: float = 100,
                  save_clips: bool = True,
                  output_dir: str = ".",
                  max_workers: int = 2, 
@@ -41,7 +45,6 @@ class EventDetector:
 
         self.output_dir = output_dir
         self.video_path = [video_path]
-        self.csv_file = csv_file
         self.events_config = events_config
         self.max_workers = max_workers
         self.total_hours = total_hours
@@ -51,9 +54,10 @@ class EventDetector:
         self.add_to_csv = add_to_csv
         self.create_montage = create_montage
         self.events = []
-        self.filename = 'events_temp.json'
+        self.filename = f"{self.output_dir}/events_temp.json"
         self.montage_length_sec = montage_length_sec
         self.vertical_format = vertical_format
+        self.report_config = report_config
 
         self.model_path = resource_path(model_path)
         self.ffmpeg_path = resource_path(ffmpeg_path)
@@ -64,7 +68,7 @@ class EventDetector:
 
         if 'twitch' in self.video_path[0]:
             twitch_handler = TwitchHandler(self.video_path[0], max_videos, self.output_dir)
-            vods = twitch_handler.get_all_videos()
+            vods = twitch_handler.get_all_videos(game_name)
             with open ('vods.txt', 'w') as file:
                 for vod in vods:
                     file.write(f"{vod}\n")
@@ -79,8 +83,6 @@ class EventDetector:
         if self.add_to_csv:
             self.events_csv = []
             self.events_csv_lock = threading.Lock()
-            if self.csv_file == None:
-                self.csv_file = 'timestamps.csv'
    
 
     def clip_worker(self, progress_bar: tqdm):
@@ -103,6 +105,9 @@ class EventDetector:
         trackers = self._init_trackers()
 
         for video_index, video_path in enumerate(self.video_path, start=1):
+            #self.csv_file = f"video{video_index}.csv"
+            #if video_index != 1:
+            self.csv_file = f"video{video_index}.csv"
             print(f"Processing video {video_path}")
             self._process_video(
                 video_path,
@@ -111,6 +116,18 @@ class EventDetector:
                 trackers,
                 progress_bar
             )
+            if self.report_config is not None and self.add_to_csv:
+                bucket_len = int(self.DURATION_TO_BE_ANALYZED // 10)# // 1 * 10)    # minutes
+                if bucket_len == 0:
+                    bucket_len = 1
+                print(bucket_len)
+                report = ReportMaker(self.output_dir, f"{self.output_dir}/{self.csv_file}",
+                                     self.events_config, self.report_config, bucket_len)
+                for chart in self.report_config["charts"]:
+                    func = getattr(report, chart["name"])
+                    func(self.report_config["color_pallete"], chart["width"], chart["height"])
+                report.fig.show()
+                report.save_report(video_index)
 
         
     def _update_progress(self, frame_idx: int, pbar: tqdm, progress_bar: tqdm = None):
@@ -191,6 +208,7 @@ class EventDetector:
 
         max_hours = min(duration_hours, self.total_hours)
         self.TOTAL_FRAMES_TO_BE_ANALYZED = int(max_hours * 3600 * self.fps)
+        self.DURATION_TO_BE_ANALYZED = max_hours*60
         print(f"Total Frames {total_frames}\nFPS {self.fps}\nVideo Duration {duration_hours}\nTotal Frames to be analyzed {self.TOTAL_FRAMES_TO_BE_ANALYZED}")
 
 
@@ -247,7 +265,7 @@ class EventDetector:
         frame_idx: int,
         video_index: int,
         temp_ids: dict,
-        clip_frames: dict
+        clip_frames: dict,
     ):
         processed_event_tracks = []
 
@@ -267,6 +285,10 @@ class EventDetector:
                 for track in tracks.get(key, []):
                     if track.track_id not in temp_ids[key]:
                         temp_ids[key].add(track.track_id)
+                        if self.add_to_csv:
+                            timestamp = time.strftime("%H:%M:%S", time.gmtime(frame_idx/self.fps))
+                            with self.events_csv_lock:
+                                self.events_csv.append({"Timestamp": timestamp, "Event": key})
 
 
     def _handle_event_tracks(
@@ -297,7 +319,7 @@ class EventDetector:
 
 
     def _process_clips(self):
-         with open('events_temp_2.json', 'r') as f:
+         with open(f"{self.output_dir}/events_temp_2.json", 'r') as f:
             events = json.load(f)
             clip_events = []
             for event in events:
@@ -329,16 +351,23 @@ class EventDetector:
             best_kill_clips = self.kills_proc.find_best_kills()
             new_folder = ''.join((self.output_dir, '/best_kill_clips'))
             os.makedirs(new_folder, exist_ok=True)
-            self.kills_proc.move_best_kills_to_folder(best_kill_clips, self.montage_length_sec, new_folder)
+            move_clips_to_folder(best_kill_clips, self.montage_length_sec, self.output_dir, new_folder)
 
         for dir in os.listdir(self.output_dir):
             if os.path.isdir(os.path.join(self.output_dir, dir)) and dir not in ("Kill", "KillStreak"):
-                montage.make_compilation(os.path.join(self.output_dir, dir),
+                clips = []
+                for clip in os.listdir(os.path.join(self.output_dir, dir)):
+                    if clip.endswith("mp4"):
+                        clips.append(os.path.join(self.output_dir, dir, clip))
+                new_folder = ''.join((self.output_dir, f"/{dir}_compilation_clips"))
+                os.makedirs(new_folder, exist_ok=True)
+                move_clips_to_folder(clips, self.montage_length_sec, self.output_dir, new_folder)
+                montage.make_compilation(os.path.join(self.output_dir, f"{dir}_compilation_clips"),
                                          os.path.join(self.output_dir, f"{dir}_highlight_reel.mp4"))
 
                 if not self.vertical_format:
-                    montage.make_tiktok(os.path.join(self.output_dir, "highlight_reel.mp4"),
-                                        os.path.join(self.output_dir, "highlight_reel_tiktok.mp4"))
+                    montage.make_tiktok(os.path.join(self.output_dir, f"{dir}_highlight_reel.mp4"),
+                                        os.path.join(self.output_dir, f"{dir}_highlight_reel_tiktok.mp4"))
         
 
     def find_event_frames(self, event_frames: list, event_type: str) -> tuple:
