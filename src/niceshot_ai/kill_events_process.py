@@ -6,7 +6,7 @@ import cv2
 from ultralytics import YOLO
 from deep_sort_realtime.deepsort_tracker import DeepSort
 from tqdm import tqdm
-import shutil
+
 
 class KillEventsProcessor:
     """Finds top kill clips and kill streaks"""
@@ -67,27 +67,12 @@ class KillEventsProcessor:
             cap.release()
 
         sorted_clips_medals = sorted(clips_medals.items(), key=lambda item: item[1], reverse=True)
-        return sorted_clips_medals
-    
-
-    def move_best_kills_to_folder(self, best_kills: dict, montage_length: int, new_folder: str):
-        print(f"Moving best clips to {self.output_dir}/{new_folder}\n")
-        final_clips = []
-        current_length = 0
-        while current_length <= montage_length:
-            if not len(best_kills) > 0:
-                break
-            
-            vid_path = best_kills.pop(0)[0]
-            final_clips.append(vid_path)
-            current_length += get_duration(vid_path)
-
-        for clip in final_clips:
-            shutil.copy(clip, new_folder)
+        final_clips = [clip_path for clip_path, _ in sorted_clips_medals]
+        return final_clips
 
 
     def concat_kill_streaks(self, video_num: int):
-        with open('events_temp.json', 'r') as f:
+        with open(f"{self.output_dir}/events_temp.json", 'r') as f:
             events = json.load(f)
         
         kill_streaks = []
@@ -136,5 +121,5 @@ class KillEventsProcessor:
                 merged.append(event)
         del temp_events, events, kill_streaks, current_streak
 
-        with open('events_temp_2.json', 'w') as f:
+        with open(f"{self.output_dir}/events_temp_2.json", 'w') as f:
             json.dump(merged, f, indent=2)
