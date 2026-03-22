@@ -10,13 +10,13 @@ import os, time
 class TwitchHandler:
     """Handles Twitch videos grabbing and downloading using Selenium"""
 
-    def __init__(self, channel_link, max_videos, output_dir):
+    def __init__(self, channel_link: str, max_videos: int, output_dir: str):
         self.channel_link = channel_link
         self.max_videos = max_videos
         self.output_dir = output_dir
 
 
-    def get_all_videos(self,):
+    def get_all_videos(self, desired_game: str) -> list:
         """Returns all detected Call of Duty: Black Ops 6 videos on a user's channel"""
 
         options = Options()
@@ -24,7 +24,6 @@ class TwitchHandler:
         options.add_argument("--disable-gpu")
         driver = webdriver.Chrome(options=options)
         driver.get(f"{self.channel_link}/videos?filter=all&sort=time")
-        desired_game = "Call of Duty: Black Ops 7"
         video_urls = set()
         last_height = driver.execute_script("return document.body.scrollHeight")
         
@@ -80,7 +79,7 @@ class TwitchHandler:
         return filtered_video_urls
     
 
-    def download_video(self, video, name):
+    def download_video(self, video: str, name: str):
         """Downloads a single video from Twitch using yt-dlp"""
 
         save_path = f"{self.output_dir}/Downloads"
@@ -101,7 +100,7 @@ class TwitchHandler:
             print(f"Error downloading {video}: {e}")
 
 
-    def download_channel_videos(self, links):
+    def download_channel_videos(self, links: list):
         """Downloads videos from the grabbed Twitch links"""
 
         for i in range(self.max_videos):
