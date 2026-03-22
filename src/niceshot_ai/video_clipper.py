@@ -45,6 +45,8 @@ class Clipper:
                 "-c:v", "libx264",
                 "-crf", "23",
                 "-preset", "fast",
+                "-c:a", "aac",
+                "-b:a", "192k",
                 "-movflags", "+faststart",
                 "-y",
                 output_path
