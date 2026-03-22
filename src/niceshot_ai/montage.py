@@ -9,63 +9,92 @@ class Montage:
     def __init__(self,):
         pass
    
-   
+
     def make_compilation(self, input_folder: str, output_file: str, fade_duration: float = 0.5):
-        print("Creating Montage...\n")
-        clips = sorted([f for f in os.listdir(input_folder) if f.endswith('.mp4')])
+        print("🎬 Creating Montage...\n")
+
+        clips = sorted([f for f in os.listdir(input_folder) if f.endswith(".mp4")])
         if not clips:
             print("❌ No clips found.")
             return
 
-        input_args = []
-        durations = []
-        for clip in clips:
-            path = os.path.join(input_folder, clip)
-            input_args.extend(["-i", path])
-            durations.append(get_duration(path))
+        chunk_size = 15
+        temp_outputs = []
 
-        filter_parts = []
-        v_streams = []
-        a_streams = []
+        for idx in range(0, len(clips), chunk_size):
+            chunk = clips[idx:idx + chunk_size]
+            print(f"⚙️ Processing chunk {idx // chunk_size + 1}...")
 
-        for i, duration in enumerate(durations):
-            fade_out_start = max(0, duration - fade_duration)
-            filter_parts.append(
-                f"[{i}:v]fade=t=in:st=0:d={fade_duration},fade=t=out:st={fade_out_start}:d={fade_duration},setpts=PTS-STARTPTS[v{i}];"
-            )
-            filter_parts.append(
-                f"[{i}:a]afade=t=in:st=0:d={fade_duration},afade=t=out:st={fade_out_start}:d={fade_duration},asetpts=PTS-STARTPTS[a{i}];"
-            )
-            v_streams.append(f"[v{i}]")
-            a_streams.append(f"[a{i}]")
+            input_args = []
+            filter_parts = []
+            pairs = ""
 
-        filter_parts.append(f"{''.join(v_streams)}concat=n={len(clips)}:v=1:a=0[v];")
-        filter_parts.append(f"{''.join(a_streams)}concat=n={len(clips)}:v=0:a=1[a]")
+            for i, clip in enumerate(chunk):
+                path = os.path.join(input_folder, clip)
+                duration = max(0.1, get_duration(path))
+                fade_out = max(0, duration - fade_duration)
 
-        filter_complex = "".join(filter_parts)
+                input_args += ["-i", path]
 
-        cmd = ["ffmpeg"]
-        cmd.extend(input_args)
-        cmd.extend([
-            "-filter_complex", filter_complex,
-            "-map", "[v]",
-            "-map", "[a]",
-            "-c:v", "libx264",
-            "-crf", "23",
-            "-preset", "fast",
-            "-c:a", "aac",
-            "-b:a", "192k",
-            "-vsync", "2",
-            "-async", "1",
-            "-y",
-            output_file
-        ])
+                filter_parts.append(
+                    f"[{i}:v]fade=t=in:st=0:d={fade_duration},fade=t=out:st={fade_out}:d={fade_duration}[v{i}]"
+                )
+                filter_parts.append(
+                    f"[{i}:a]afade=t=in:st=0:d={fade_duration},afade=t=out:st={fade_out}:d={fade_duration}[a{i}]"
+                )
 
-        try:
+                pairs += f"[v{i}][a{i}]"
+
+            filter_parts.append(f"{pairs}concat=n={len(chunk)}:v=1:a=1[v][a]")
+
+            filter_complex = ";".join(filter_parts)
+
+            temp_output = os.path.join(input_folder, f"_temp_{idx}.mp4")
+            temp_outputs.append(temp_output)
+
+            cmd = [
+                "ffmpeg",
+                *input_args,
+                "-filter_complex", filter_complex,
+                "-map", "[v]",
+                "-map", "[a]",
+                "-c:v", "libx264",
+                "-c:a", "aac",
+                "-y",
+                temp_output
+            ]
+
             subprocess.run(cmd, check=True)
-            print(f"✅ Montage with fade transitions created: {output_file}")
-        except subprocess.CalledProcessError as e:
-            print(f"❌ FFmpeg error: {e}")
+
+        # Merge
+        print("🔗 Merging...")
+
+        if len(temp_outputs) == 1:
+            # Only one chunk → just rename it to the final output
+            os.replace(temp_outputs[0], output_file)
+            print(f"✅ Only one chunk, moved to final output: {output_file}")
+        else:
+            # Normal concat merge
+            list_file = os.path.join(input_folder, "merge.txt")
+            with open(list_file, "w") as f:
+                for t in temp_outputs:
+                    f.write(f"file '{t}'\n")
+
+            subprocess.run([
+                "ffmpeg",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", list_file,
+                "-c:v", "libx264",
+                "-crf", "23",
+                "-preset", "fast",
+                "-c:a", "aac",
+                "-b:a", "192k",
+                "-y",
+                output_file
+            ], check=True)
+
+        print(f"✅ Done: {output_file}")
 
 
     def make_tiktok(self, video_path: str, output_path: str):
