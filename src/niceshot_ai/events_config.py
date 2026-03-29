@@ -1,4 +1,5 @@
 from deep_sort_realtime.deepsort_tracker import DeepSort
+from .trackers import DeathTracker
 
 
 cod_bo6_config = {
@@ -17,7 +18,7 @@ cod_bo6_config = {
 
     "Death": {"pre": 2,
               "post": 1,
-              'tracker': DeepSort(max_age=10, max_cosine_distance=1),
+              'tracker': DeathTracker(max_age=12),
               'cls_label': 2,
               'conf_thres': 0.85,
               'clip_eligible': True}
