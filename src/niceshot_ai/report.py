@@ -109,8 +109,6 @@ class ReportMaker:
         stats = pd.merge(kills_per_bucket, deaths_per_bucket, on="Bucket", how="outer")
         stats[["Cumulative_Kills", "Cumulative_Deaths"]] =\
         stats[["Cumulative_Kills", "Cumulative_Deaths"]].ffill().fillna(0)
-        print(stats)
-
         stats["Minutes"] = (stats["Bucket"] + 1) * (bucket_seconds / 60)
         stats["Time_HHMMSS"] = pd.to_timedelta(stats["Minutes"], unit='m').astype(str)
         stats["Time_HHMMSS"] = stats["Time_HHMMSS"].str.replace("0 days ", "")
