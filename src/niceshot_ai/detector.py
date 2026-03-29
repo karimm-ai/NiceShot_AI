@@ -17,6 +17,8 @@ from queue import Queue
 import os, threading, time
 import json
 import numpy
+import logging
+
 
 
 class EventDetector:
@@ -83,7 +85,13 @@ class EventDetector:
         if self.add_to_csv:
             self.events_csv = []
             self.events_csv_lock = threading.Lock()
-   
+        
+        logging.basicConfig(
+            filename="tracker.log",
+            level=logging.INFO,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        
 
     def clip_worker(self, progress_bar: tqdm):
         while True:
@@ -102,6 +110,7 @@ class EventDetector:
     def detect_events(self, progress_bar: tqdm = None):
         os.makedirs(self.output_dir, exist_ok=True)
         model = YOLO(self.model_path).to("cuda")
+        logging.info("Loaded Model Successfully!")
         trackers = self._init_trackers()
 
         for video_index, video_path in enumerate(self.video_path, start=1):
