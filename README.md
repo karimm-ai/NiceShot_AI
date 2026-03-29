@@ -137,3 +137,7 @@ Tested on my old laptop with the following specs:
 This is run only to confirm an event after it's detected. Not through the whole video frames. It can cause the processing speed to fall down from 170 FPS to 30 FPS (on new laptop) temporarily until event is confirmed. It can definitely be turned off, however this will cause a kill event during "SPECTATING" to be counted.
 
 ---
+
+#### **Open to full ownership transfer. Contact me: niceshot.ai@gmail.com**
+
+---
