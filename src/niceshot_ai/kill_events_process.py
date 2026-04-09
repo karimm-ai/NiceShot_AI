@@ -1,5 +1,5 @@
-from .utils import get_duration
-from .event_types import Event
+from utils import get_duration, report_progress
+from event_types import Event
 
 import json, os
 import cv2
@@ -18,7 +18,7 @@ class KillEventsProcessor:
 
     def find_best_kills(self) -> dict:
         """Kill clips where a lot of medals pop up"""
-
+        self.progress = set(range(3, 101, 3))
         print("Extracting Best clips\n")
 
         model = YOLO(self.model_path).to("cuda")
@@ -33,6 +33,9 @@ class KillEventsProcessor:
             
             conf_threshold = 0.85
             temp = set()
+        
+        self.total_clips = len(clips_medals)
+        self.analyzed_clips = 0
         
         for key, _ in clips_medals.items():
             cap = cv2.VideoCapture(key)
@@ -65,6 +68,8 @@ class KillEventsProcessor:
                     pbar.update(1)
             
             cap.release()
+            self.analyzed_clips+=1
+            report_progress(self.output_dir, self.analyzed_clips, self.total_clips, self.progress)
 
         sorted_clips_medals = sorted(clips_medals.items(), key=lambda item: item[1], reverse=True)
         final_clips = [clip_path for clip_path, _ in sorted_clips_medals]
