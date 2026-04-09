@@ -4,7 +4,7 @@ import tempfile
 import urllib.request
 
 REPO_ZIP_URL = "https://github.com/karimm-ai/NiceShot_AI/archive/refs/heads/main.zip"
-VERSION_URL  = "https://raw.githubusercontent.com/karimm-ai/NiceShot_AI/main/src/niceshot_ai/version.json"
+VERSION_URL  = "https://raw.githubusercontent.com/karimm-ai/NiceShot_AI/main/version.json"
 
 # Root of the tool folder (where niceshot_ai.py lives)
 current_dir = os.path.dirname(os.path.abspath(__file__))
