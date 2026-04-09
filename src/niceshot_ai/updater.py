@@ -7,7 +7,12 @@ REPO_ZIP_URL = "https://github.com/karimm-ai/NiceShot_AI/archive/refs/heads/main
 VERSION_URL  = "https://raw.githubusercontent.com/karimm-ai/NiceShot_AI/main/src/niceshot_ai/version.json"
 
 # Root of the tool folder (where niceshot_ai.py lives)
-TOOL_DIR = os.path.dirname(os.path.abspath(__file__))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+while os.path.basename(current_dir) != "NiceShot_AI":
+    current_dir = os.path.dirname(current_dir)
+
+TOOL_DIR = current_dir
+
 
 def get_current_version():
     """Read version from local version.json next to this script."""
@@ -18,6 +23,7 @@ def get_current_version():
     except Exception:
         return "0.0.0"  # force update if version file is missing
 
+
 def get_latest_version():
     """Fetch latest version from GitHub."""
     try:
@@ -26,12 +32,14 @@ def get_latest_version():
     except Exception:
         return None  # no internet or GitHub down — skip update silently
 
+
 def parse_version(v):
     """Convert '1.2.3' to (1, 2, 3) for comparison."""
     try:
         return tuple(int(x) for x in v.strip().split("."))
     except Exception:
         return (0, 0, 0)
+
 
 def download_and_apply_update():
     """Download latest ZIP from GitHub and replace current files."""
@@ -57,29 +65,29 @@ def download_and_apply_update():
         print(f"[Updater] FAILED: Could not extract update: {e}")
         return False
 
-    # Find the inner folder GitHub puts inside the ZIP (e.g. NiceShot_AI-main)
+    # Find the inner folder GitHub puts inside the ZIP (e.g., NiceShot_AI-main)
     extracted_folders = os.listdir(tmp_dir)
     if not extracted_folders:
         print("[Updater] FAILED: Update ZIP was empty.")
         return False
 
-    # The repo files live inside src/niceshot_ai/ in the ZIP
-    source_dir = os.path.join(tmp_dir, extracted_folders[0], "src", "niceshot_ai")
-    if not os.path.exists(source_dir):
-        # Fallback: repo root if no src/niceshot_ai subfolder
-        source_dir = os.path.join(tmp_dir, extracted_folders[0])
+    # This will be the root of the extracted repo (GitHub puts this inside a folder)
+    extracted_root_dir = os.path.join(tmp_dir, extracted_folders[0])
 
-    # Copy new files over existing ones in TOOL_DIR
+    # Copy all files from the extracted folder to the TOOL_DIR (root of your project)
     try:
-        for item in os.listdir(source_dir):
-            src  = os.path.join(source_dir, item)
+        for item in os.listdir(extracted_root_dir):
+            src = os.path.join(extracted_root_dir, item)
             dest = os.path.join(TOOL_DIR, item)
+            
+            # Handle directories
             if os.path.isdir(src):
                 if os.path.exists(dest):
-                    shutil.rmtree(dest)
-                shutil.copytree(src, dest)
+                    shutil.rmtree(dest)  # Remove the existing directory
+                shutil.copytree(src, dest)  # Copy the entire directory
             else:
-                shutil.copy2(src, dest)
+                # Handle individual files
+                shutil.copy2(src, dest)  # Copy file with metadata
     except Exception as e:
         print(f"[Updater] FAILED: Could not apply update files: {e}")
         return False
@@ -91,7 +99,9 @@ def download_and_apply_update():
     except Exception:
         pass
 
+    print("[Updater] Update applied successfully!")
     return True
+
 
 def check_and_update():
     """
