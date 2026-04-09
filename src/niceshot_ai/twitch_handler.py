@@ -4,7 +4,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
-import os, time
+import os, time, subprocess
 
 
 class TwitchHandler:
@@ -80,24 +80,53 @@ class TwitchHandler:
     
 
     def download_video(self, video: str, name: str):
-        """Downloads a single video from Twitch using yt-dlp"""
+        save_path = self.output_dir
+        os.makedirs(save_path, exist_ok=True)
 
-        save_path = f"{self.output_dir}/Downloads"
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
+        output_template = os.path.join(save_path, f'{name}.%(ext)s')
 
-        ydl_opts = {
-            'outtmpl': os.path.join(save_path, f'{name}.%(ext)s'),
-            'format': 'best',
-        }
+        formats_to_try = [
+            'bv*[vcodec!=av01]+ba/b[vcodec!=av01]',
+            'bv*[vcodec^=avc1]+ba/b[vcodec^=avc1]',
+            'b[vcodec!=av01]'
+        ]
 
-        try:
-            print(f"Downloading: {video}...")
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([video])
-            print(f"Download completed for: {video}")
-        except Exception as e:
-            print(f"Error downloading {video}: {e}")
+        for fmt in formats_to_try:
+            ydl_opts = {
+                'outtmpl': output_template,
+                'format': fmt,
+                'merge_output_format': 'mp4',
+                'retries': 10,
+                'fragment_retries': 10,
+                'noplaylist': True,
+            }
+
+            try:
+                print(f"Trying format: {fmt}")
+
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([video])
+
+                # Validate file
+                final_file = None
+                for ext in ['mp4', 'mkv', 'webm']:
+                    candidate = os.path.join(save_path, f"{name}.{ext}")
+                    if os.path.exists(candidate) and os.path.getsize(candidate) > 100000:  # >100KB safety
+                        final_file = candidate
+                        break
+
+                if not final_file:
+                    raise Exception("Downloaded file is missing or too small")
+
+                print(f"✅ Success with format: {fmt}")
+                new_file = self.reencode_to_h264(final_file)
+                return new_file
+
+            except Exception as e:
+                print(f"❌ Failed with {fmt}: {e}")
+
+        print(f"💥 All download attempts failed for: {video}")
+        return None
 
 
     def download_channel_videos(self, links: list):
@@ -110,3 +139,25 @@ class TwitchHandler:
             for file in os.listdir(f"{self.output_dir}/Downloads"):
                 if not file.endswith('.mp4') or 'temp' in file:
                     os.remove(f"{self.output_dir}/Downloads/{file}")
+
+
+    def reencode_to_h264(self, input_file):
+        output_file = f"{self.output_dir}/{input_file.rsplit('.', 1)[0] + '_fixed.mp4'}"
+
+        cmd = [
+            "ffmpeg",
+            "-y",                      # overwrite
+            "-i", input_file,
+            "-c:v", "libx264",         # convert video → H.264
+            "-preset", "fast",
+            "-crf", "23",              # quality (lower = better)
+            "-c:a", "aac",             # audio
+            output_file
+        ]
+
+        try:
+            subprocess.run(cmd, check=True)
+            return output_file
+        except subprocess.CalledProcessError as e:
+            print(f"FFmpeg failed: {e}")
+            return None
