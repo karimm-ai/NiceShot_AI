@@ -8,7 +8,9 @@ VERSION_URL  = "https://raw.githubusercontent.com/karimm-ai/NiceShot_AI/main/ver
 
 # Root of the tool folder (where niceshot_ai.py lives)
 current_dir = os.path.dirname(os.path.abspath(__file__))
-while os.path.basename(current_dir) != "NiceShot_AI":
+print(os.path.abspath(__file__))
+
+while os.path.basename(current_dir) != "Niceshot_AI":
     current_dir = os.path.dirname(current_dir)
 
 TOOL_DIR = current_dir
