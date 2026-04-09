@@ -8,3 +8,4 @@ ultralytics==8.3.55
 yt_dlp==2025.10.22
 onnxruntime
 easyocr
+#discord
