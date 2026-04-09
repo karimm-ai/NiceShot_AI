@@ -43,7 +43,7 @@ class EventDetector:
         if game_name.lower() == "call of duty black ops 6":
             from events_config import cod_bo6_config
             self.events_config = cod_bo6_config
-            self.model_path = resource_path("NiceShot_AI/game_models/yolov8n-cod_bo6.pt")
+            self.model_path = resource_path("../game_models/yolov8n-cod_bo6.pt")
 
             if session_analysis:
                 from charts_config import cod_bo6_chart_config
