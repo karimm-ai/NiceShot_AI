@@ -43,7 +43,7 @@ class EventDetector:
         if game_name.lower() == "call of duty black ops 6":
             from events_config import cod_bo6_config
             self.events_config = cod_bo6_config
-            self.model_path = resource_path("../game_models/yolov8n-cod_bo6.pt")
+            self.model_path = resource_path("game_models/yolov8n-cod_bo6.pt")
 
             if session_analysis:
                 from charts_config import cod_bo6_chart_config
@@ -184,6 +184,7 @@ class EventDetector:
                     break
 
                 if self._should_process_frame(frame_idx):
+                    report_progress(self.output_dir, frame_idx, self.TOTAL_FRAMES_TO_BE_ANALYZED, self.vid_process_progress)
                     detections = self._collect_detections(model, frame)
                     tracks = self._update_trackers(trackers, detections, frame)
                     self._handle_tracks(
@@ -347,6 +348,7 @@ class EventDetector:
                 clip_events.append((out_dir, event, video_path))
 
             progress_bar = tqdm(total=len(clip_events), desc="Extracting clips", unit="clip")
+            self.total_clips = len(clip_events)
 
             for _ in range(self.max_workers):
                 threading.Thread(target=self.clip_worker, args=(progress_bar,), daemon=True).start()
