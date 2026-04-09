@@ -1,5 +1,5 @@
 from deep_sort_realtime.deepsort_tracker import DeepSort
-from .trackers import DeathTracker
+from trackers import DeathTracker
 
 
 cod_bo6_config = {
@@ -11,15 +11,15 @@ cod_bo6_config = {
              'confirm_event': True,
              'clip_eligible': True},
 
-    "Medal": {'tracker': DeepSort(max_age=30, nms_max_overlap=0.6),
+    "Medal": {'tracker': DeepSort(max_age=30, nms_max_overlap=0.01),
               'cls_label': 1,
-              'conf_thres': 0.85,
+              'conf_thres': 0.9,
               'confirm_event': True},
 
     "Death": {"pre": 2,
               "post": 1,
-              'tracker': DeathTracker(max_age=12),
+              'tracker': DeathTracker(max_age=18),
               'cls_label': 2,
-              'conf_thres': 0.85,
+              'conf_thres': 0.82,
               'clip_eligible': True}
 }
