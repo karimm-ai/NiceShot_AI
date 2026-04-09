@@ -1,4 +1,4 @@
-from .utils import get_duration
+from utils import get_duration
 
 import os, subprocess
 
