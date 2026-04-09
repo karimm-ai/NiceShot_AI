@@ -1,13 +1,11 @@
-from .twitch_handler import TwitchHandler
-from .video_clipper import Clipper
-from .kill_events_process import KillEventsProcessor
-from .event_types import Event
-from .montage import Montage
-from .utils import add_to_csv_, resource_path, add_to_json, move_clips_to_folder
-from .events_config import cod_bo6_config
-from .charts_config import cod_bo6_chart_config
-from .event_confirm import EventConfirm
-from .report import ReportMaker
+from twitch_handler import TwitchHandler
+from video_clipper import Clipper
+from kill_events_process import KillEventsProcessor
+from event_types import Event
+from montage import Montage
+from utils import add_to_csv_, resource_path, add_to_json, move_clips_to_folder, report_progress
+from event_confirm import EventConfirm
+from report import ReportMaker
 
 import cv2
 from ultralytics import YOLO
@@ -26,28 +24,33 @@ class EventDetector:
 
     def __init__(self,
                  game_name: str,
-                 model_path: str,
-                 ffmpeg_path: str,
                  video_path: str,
-                 events_config: dict = cod_bo6_config,
-                 report_config: list | None = cod_bo6_chart_config,
                  total_hours: float = 100,
                  save_clips: bool = True,
                  output_dir: str = ".",
-                 max_workers: int = 2, 
+                 max_workers: int = 2,
                  frame_idx_start: int = 0,
-                 frames_to_skip: int = 5,
+                 frames_to_skip: int = 8,
                  add_to_csv: bool = False,
-                 create_montage: bool = False,
+                 create_montage: bool = True,
                  montage_length_sec: int = 20,
                  max_videos: int = 1,
                  vertical_format: bool = False,
-                 advanced_detection:bool = False
+                 advanced_detection: bool = True,
+                 session_analysis = False
                  ):
+        
+        if game_name.lower() == "call of duty black ops 6":
+            from events_config import cod_bo6_config
+            self.events_config = cod_bo6_config
+            self.model_path = resource_path("NiceShot_AI/game_models/yolov8n-cod_bo6.pt")
+
+            if session_analysis:
+                from charts_config import cod_bo6_chart_config
+                self.report_config = cod_bo6_chart_config
 
         self.output_dir = output_dir
         self.video_path = [video_path]
-        self.events_config = events_config
         self.max_workers = max_workers
         self.total_hours = total_hours
         self.save_clips = save_clips
@@ -59,10 +62,8 @@ class EventDetector:
         self.filename = f"{self.output_dir}/events_temp.json"
         self.montage_length_sec = montage_length_sec
         self.vertical_format = vertical_format
-        self.report_config = report_config
 
-        self.model_path = resource_path(model_path)
-        self.ffmpeg_path = resource_path(ffmpeg_path)
+        self.ffmpeg_path = resource_path("ffmpeg.exe")
         print(f"FFMPEG PATH: {self.ffmpeg_path}")
 
         if advanced_detection:
@@ -91,9 +92,10 @@ class EventDetector:
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
-        
 
-    def clip_worker(self, progress_bar: tqdm):
+        self.percentages = set(range(3, 101, 3))
+
+    def clip_worker(self, progress_bar):
         while True:
             args = self.clip_queue.get()
             if args is None:
@@ -105,19 +107,20 @@ class EventDetector:
             finally:
                 self.clip_queue.task_done()
                 progress_bar.update(1)
-   
+                self.total_clips_extracted+=1
+                report_progress(self.output_dir, self.total_clips_extracted, self.total_clips, self.clip_progress)
 
-    def detect_events(self, progress_bar: tqdm = None):
+
+    def detect_events(self, progress_bar = None):
+        self.vid_process_progress = self.percentages.copy()
         os.makedirs(self.output_dir, exist_ok=True)
         model = YOLO(self.model_path).to("cuda")
         logging.info("Loaded Model Successfully!")
         trackers = self._init_trackers()
+        logging.info("Loaded Trackers Successfully!")
 
         for video_index, video_path in enumerate(self.video_path, start=1):
-            #self.csv_file = f"video{video_index}.csv"
-            #if video_index != 1:
             self.csv_file = f"video{video_index}.csv"
-            print(f"Processing video {video_path}")
             self._process_video(
                 video_path,
                 video_index,
@@ -135,11 +138,11 @@ class EventDetector:
                 for chart in self.report_config["charts"]:
                     func = getattr(report, chart["name"])
                     func(self.report_config["color_pallete"], chart["width"], chart["height"])
-                report.fig.show()
+                #report.fig.show()
                 report.save_report(video_index)
 
         
-    def _update_progress(self, frame_idx: int, pbar: tqdm, progress_bar: tqdm = None):
+    def _update_progress(self, frame_idx: int, pbar, progress_bar = None):
         pbar.update(1)
 
         if not progress_bar:
@@ -158,9 +161,10 @@ class EventDetector:
         return trackers
 
 
-    def _process_video(self, video_path: str, video_index: int, model: YOLO, trackers: dict, progress_bar: tqdm):
-        cap = cv2.VideoCapture(video_path)
-        self._init_video_metadata(cap)
+    def _process_video(self, video_path: str, video_index: int, model: YOLO, trackers: dict, progress_bar):
+        logging.info(f"Processing video {video_path}")
+        self.cap = cv2.VideoCapture(video_path)
+        self._init_video_metadata(self.cap)
 
         clip_frames = {}
         temp_ids = {}
@@ -173,8 +177,8 @@ class EventDetector:
 
         with tqdm(total=self.TOTAL_FRAMES_TO_BE_ANALYZED, desc="Processing video") as pbar:
             frame_idx = 0
-            while cap.isOpened() and frame_idx < self.TOTAL_FRAMES_TO_BE_ANALYZED:
-                ret, frame = cap.read()
+            while self.cap.isOpened() and frame_idx < self.TOTAL_FRAMES_TO_BE_ANALYZED:
+                ret, frame = self.cap.read()
                 if not ret:
                     break
 
@@ -193,7 +197,8 @@ class EventDetector:
                 frame_idx += 1
 
         self._finalize_video_events(video_index, clip_frames)
-        cap.release()
+        logging.info(f"Finalizing video {video_index}")
+        self.cap.release()
 
         if "Kill" in self.events_config.keys():
             self.kills_proc = KillEventsProcessor(self.model_path, self.output_dir)
@@ -219,6 +224,7 @@ class EventDetector:
         self.TOTAL_FRAMES_TO_BE_ANALYZED = int(max_hours * 3600 * self.fps)
         self.DURATION_TO_BE_ANALYZED = max_hours*60
         print(f"Total Frames {total_frames}\nFPS {self.fps}\nVideo Duration {duration_hours}\nTotal Frames to be analyzed {self.TOTAL_FRAMES_TO_BE_ANALYZED}")
+        logging.info(f"Total Frames {total_frames}\nFPS {self.fps}\nVideo Duration {duration_hours}\nTotal Frames to be analyzed {self.TOTAL_FRAMES_TO_BE_ANALYZED}")
 
 
     def _should_process_frame(self, frame_idx: int) -> bool:
@@ -229,6 +235,7 @@ class EventDetector:
     
 
     def _collect_detections(self, model: YOLO, frame: numpy.ndarray) -> dict:
+        logging.info("Collecting detections")
         results = model(frame, verbose=False)[0]
         
         detections = {}
@@ -295,7 +302,7 @@ class EventDetector:
                     if track.track_id not in temp_ids[key]:
                         temp_ids[key].add(track.track_id)
                         if self.add_to_csv:
-                            timestamp = time.strftime("%H:%M:%S", time.gmtime(frame_idx/self.fps))
+                            timestamp = time.strftime("%H:%M:%S", time.gmtime(self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000))
                             with self.events_csv_lock:
                                 self.events_csv.append({"Timestamp": timestamp, "Event": key})
 
@@ -315,7 +322,7 @@ class EventDetector:
                 if frame_buffer:
                     self.finalize_event(frame_buffer, video_index, event_type)
                     frame_buffer.clear()
-            frame_buffer.append(frame_idx)
+            frame_buffer.append(self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000)
 
 
     def _finalize_video_events(self, video_index: int, clip_frames: dict):
@@ -328,6 +335,7 @@ class EventDetector:
 
 
     def _process_clips(self):
+         self.clip_progress = self.percentages.copy()
          with open(f"{self.output_dir}/events_temp_2.json", 'r') as f:
             events = json.load(f)
             clip_events = []
@@ -379,22 +387,29 @@ class EventDetector:
                                         os.path.join(self.output_dir, f"{dir}_highlight_reel_tiktok.mp4"))
         
 
-    def find_event_frames(self, event_frames: list, event_type: str) -> tuple:
+    def find_event_frames(self, event_frames: list, event_type: str) -> tuple | None:       
         seconds_before = self.events_config[event_type]['pre']
         seconds_after = self.events_config[event_type]['post']
-        starting_frame = min(event_frames)-(self.fps*seconds_before)
-        ending_frame = max(event_frames)+(self.fps*seconds_after)
+        starting_time = min(event_frames) - seconds_before
+        ending_time = max(event_frames) + seconds_after
         
-        if starting_frame - self.fps <= 0:
-            starting_frame = 0
+        if starting_time <= 0:
+            starting_time = 0
         
-        if ending_frame >= self.TOTAL_FRAMES_TO_BE_ANALYZED:
-            ending_frame = self.TOTAL_FRAMES_TO_BE_ANALYZED
+        if ending_time >= self.TOTAL_FRAMES_TO_BE_ANALYZED/self.fps:
+            ending_time = self.TOTAL_FRAMES_TO_BE_ANALYZED/self.fps
+        
+        # Avoid large clips of irrelevant events (some cases)
+        estimated_clip_time = seconds_before + 2 + seconds_after
+        if ending_time - starting_time > estimated_clip_time:
+            ending_time = starting_time + estimated_clip_time
             
-        return starting_frame/60, ending_frame/60
+        return starting_time, ending_time
 
 
     def finalize_event(self, event_frames: list, video_num: int, event_type: str):
+        if not event_frames:
+            return
         starting_time, ending_time = self.find_event_frames(event_frames, event_type)
         event = Event(event_type, starting_time, ending_time, video_num)
         self.events.append(event)
