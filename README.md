@@ -12,7 +12,7 @@ Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 
 | Key events |                        Description                            |          Limitations        |
 |------------|---------------------------------------------------------------|-----------------------------
-|    Kill    |  Only face to face gun kills                                  |  Only face-to-face gun kills|
+|    Kill    |  Gun kills                                  |  Only face-to-face gun kills|
 |    Medal   |  When a medal earned by the player pops up during gameplay    |              -              |
 |    Death   |  When player gets eliminated during gameplay                |                -              |
 
@@ -20,7 +20,7 @@ Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 
 | Key events |                        Description                            |          Limitations        |
 |------------|---------------------------------------------------------------|-----------------------------
-|    Kill    |  Only face to face gun kills                                  |  Only face-to-face gun kills|
+|    Kill    |  Gun kills                                  |  Only face-to-face gun kills|
 |    Medal   |  When a medal earned by the player pops up during gameplay    |              -              |
 |    Death   |  When player gets eliminated during gameplay                |                -              |
 
@@ -28,13 +28,13 @@ Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 
 ### **Model Description**
 
-YOLOv8n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned on custom collected & annotated dataset of gameplay video under CC license.
+YOLOv8n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned on custom collected & annotated dataset of gameplay videos under CC license.
 
 ---
 
 ### **Tool Features**
 
-- **Robust to Scalability**: Uses configurable variables enabling it to adapt to different game models and events without massive changes. (still to be tested)
+- **Robust to Scalability**: Uses configurable variables enabling it to adapt to different game models and events without massive changes. (In testing)
 - **Accurate Event Confirmation**: Using EasyOCR to prevent counting events occurring in special game scenes (ex.KILLCAMS and SPECTATING).
 - **Special Events Detection**: (Ex. Kill Streaks occurring from the combination of multiple consecutive kills within a time threshold).
 - **Events Timestamping & CSV Output**: Timestamps detected events and dumps into a CSV file with 2 columns [Timestamp, Event] for further gameplay data analysis and inspections.
@@ -50,7 +50,7 @@ YOLOv8n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned
 - **Clips Export in 16:9 & TikTok formats**
 - **Creating Highlight Reels**: Concatenating all clips within a folder into one compilation video with simple fade in & out transition edits between clips in both vertical & horizontal formats.
 - **Custom Reel Lengths**: Allowing for creating compilations of any length from the extracted clips.
-- **Analyzing videos in bulk from a Twitch channel**: Downloads and analyzes desired game streams from a Twitch channel performing bulk analysis of gameplay videos.
+- **Analyzing videos in bulk from a Twitch channel**: Downloads and analyzes desired game streams from a Twitch channel performing bulk analysis of gameplay videos. (In testing)
 - **Ranking Special Clips**: Ex. (Hot Kill Clips where multiple medals pop up during the event).
 
 ---
@@ -58,7 +58,7 @@ YOLOv8n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned
 ### **Limitations**
 
 - **An event may get detected more than one time or not detected at all**: From my testing, an event getting detected more than once is more likely than not getting detected at all which means more tuning should be done on the tracker algorithm.
-- **Special kill events are not detected**: Model is not trained on detecting player's "grenade kill", "mine/trap kill", etc. Just face to face gun kills are counted.
+- **Only 1 supported game for now**
 
 ---
 
@@ -90,23 +90,23 @@ pip install -r requirements.txt
 ```
 from src.niceshot_ai.detector import EventDetector
 
-detector = EventDetector("Call of Duty Black Ops 6", # Name of the game
-                        'game_models/yolov8n-cod_bo6.pt', # YOLO Model Path
-                        'ffmpeg.exe', # FFMPEG Path (You can find it where you installed FFMPEG. Can also be 'ffmpeg.exe')
-                        "A:/Niceshot_AI/EXTRAS/ALL_VIDEOS_FOR_INFERENCE/1.mp4", # CoD BO6 gameplay video or Twitch Channel Link
-                        total_hours=1, # Total hours to analyze of the video (each video in case analyzing a Twitch Channel)
-                        save_clips=False, # Save clips locally
-                        add_to_csv=True, # Add events and timestamps to a CSV file.
-                        output_dir='test3', # Output directory where all clips, highlights and CSV file are saved
-                        frames_to_skip=8, # Frames to skip during analysis (The more, the faster the analysis is finished)
-                        frame_idx_start=0, # Starting frame
-                        create_montage=True, # Create a highlight reel for clipped events
-                        max_workers=6, # Default for extracting clips
-                        max_videos=3, # Only useful if passing a Twitch channel as it gets the most recent specified number of videos
-                        montage_length_sec=50, # Total duration of the generated highlight reel in seconds
-                        vertical_format=True, # Auto-clip in vertical format
-                        advanced_detection=True, # Use OCR to confirm some events
-                        ) 
+detector = EventDetector(
+    "Call of Duty Black Ops 6", # Game name to import proper model and chart configuration
+    "video1.mp4", # Gameplay video path to analyze
+    total_hours=100, # Total hours to analyze of the video
+    save_clips=True, # Auto-clip events and save event clips locally (required for compilation making)
+    output_dir=".", # Output folder for clips, charts and csv file
+    max_workers=2, # default for auto-clipping
+    frame_idx_start=0, # Start frame of the video
+    frames_to_skip=8, # Frames to skip during analysis (the more, the faster tha analysis)
+    add_to_csv=True, # Timestamp events and output to csv
+    create_montage=True, # Create compilation of every clippable event
+    montage_length_sec=50, # Length of the compilation
+    max_videos=1, 
+    vertical_format=False, # Auto-clip events in vertical format only
+    advanced_detection=True, # Confirm some events with OCR
+    session_analysis=False # Report maker
+)
 
 detector.detect_events()
 ```
