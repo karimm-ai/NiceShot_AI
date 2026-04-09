@@ -1,4 +1,5 @@
 import json, subprocess, os, csv, sys, shutil
+from pathlib import Path
 
 
 def get_duration(clip_path: str) -> float:
@@ -38,19 +39,21 @@ def resource_path(filename: str) -> str:
 
 
 def add_to_json(filename: str, events: list):
-        if os.path.exists(filename):
-            try:
-                with open(filename, "r") as f:
-                    data = json.load(f)
-            except:
-                data = []
-        else:
+    #filename = get_data_path(filename)
+    #filename.parent.mkdir(parents=True, exist_ok=True)
+    if os.path.exists(filename):
+        try:
+            with open(filename, "r") as f:
+                data = json.load(f)
+        except:
             data = []
+    else:
+        data = []
 
-        data.extend([e.to_dict() for e in events])
+    data.extend([e.to_dict() for e in events])
 
-        with open(filename, "w") as f:
-            json.dump(data, f, indent=2)
+    with open(filename, "w") as f:
+        json.dump(data, f, indent=2)
 
 
 def move_clips_to_folder(clips_paths: list, montage_length: int, output_dir: str, new_folder: str):
@@ -67,3 +70,17 @@ def move_clips_to_folder(clips_paths: list, montage_length: int, output_dir: str
 
     for clip in final_clips:
         shutil.copy(clip, new_folder)
+
+
+def get_data_path(filename):
+    base_path = Path.home() / ".my_app"
+    base_path.mkdir(exist_ok=True)
+    return base_path / filename
+
+
+def report_progress(output_dir, numerator, denominator, progress):
+    current_percent = numerator*100//denominator
+    if current_percent in progress:
+        with open(f"{output_dir}/progress.json", "w") as file:
+            json.dump({"PROGRESS": current_percent}, file)
+        progress.remove(current_percent)
