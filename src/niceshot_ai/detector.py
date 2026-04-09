@@ -81,7 +81,8 @@ class EventDetector:
             
         if self.save_clips:
             self.clip_queue = Queue()
-            self.clipper = Clipper(self.ffmpeg_path, self.vertical_format)            
+            self.clipper = Clipper(self.ffmpeg_path, self.vertical_format)
+            self.total_clips_extracted = 0         
         
         if self.add_to_csv:
             self.events_csv = []
