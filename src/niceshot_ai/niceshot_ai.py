@@ -13,6 +13,11 @@ def main():
 
     # Optional
     parser.add_argument("--game", default="Call of Duty Black Ops 6")
+    parser.add_argument("--save_clips", action="store_true")
+    parser.add_argument("--vertical_format", action="store_true")
+    parser.add_argument("--session_analysis", action="store_true")
+    parser.add_argument("--compilation", action="store_true")
+    parser.add_argument("--comp_len", type=int, default=0)
  
     args = parser.parse_args()
 
@@ -22,19 +27,19 @@ def main():
         detector = EventDetector(
             args.game,
             args.input,
-            total_hours=100,
-            save_clips=True,
+            total_hours=10000,
+            save_clips=args.save_clips,
             output_dir=args.output,
             max_workers=2,
             frame_idx_start=0,
             frames_to_skip=8,
             add_to_csv=True,
-            create_montage=True,
-            montage_length_sec=50,
+            create_montage=args.compilation,
+            montage_length_sec=args.comp_len,
             max_videos=1,
-            vertical_format=False,
+            vertical_format=args.vertical_format,
             advanced_detection=True,
-            session_analysis=False
+            session_analysis=args.session_analysis
         )
 
         detector.detect_events()
