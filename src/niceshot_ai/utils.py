@@ -78,9 +78,9 @@ def get_data_path(filename):
     return base_path / filename
 
 
-def report_progress(output_dir, numerator, denominator, progress):
+def report_progress(output_dir, numerator, denominator, progress, msg):
     current_percent = numerator*100//denominator
     if current_percent in progress:
         with open(f"{output_dir}/progress.json", "w") as file:
-            json.dump({"PROGRESS": current_percent}, file)
+            json.dump({"PROGRESS": current_percent, "MSG": msg}, file)
         progress.remove(current_percent)
