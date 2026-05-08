@@ -40,14 +40,24 @@ class EventDetector:
                  session_analysis = False
                  ):
         
-        if game_name.lower() == "call of duty black ops 6":
+        if game_name.lower()  == "call of duty: black ops 6":
             from events_config import cod_bo6_config
             self.events_config = cod_bo6_config
             self.model_path = resource_path("../game_models/yolov8n-cod_bo6.pt")
-
+        
             if session_analysis:
                 from charts_config import cod_bo6_chart_config
                 self.report_config = cod_bo6_chart_config
+
+        elif game_name.lower() == "call of duty: black ops 7":
+            from events_config import cod_bo7_config
+            self.events_config = cod_bo7_config
+            self.model_path = resource_path("../game_models/yolov8n-cod_bo7.pt")
+
+            if session_analysis:
+                from charts_config import cod_bo7_chart_config
+                self.report_config = cod_bo7_chart_config
+
 
         self.output_dir = output_dir
         self.video_path = [video_path]
@@ -109,7 +119,7 @@ class EventDetector:
                 self.clip_queue.task_done()
                 progress_bar.update(1)
                 self.total_clips_extracted+=1
-                report_progress(self.output_dir, self.total_clips_extracted, self.total_clips, self.clip_progress)
+                report_progress(self.output_dir, self.total_clips_extracted, self.total_clips, self.clip_progress, "EXTRACTING CLIPS...")
 
 
     def detect_events(self, progress_bar = None):
@@ -129,7 +139,7 @@ class EventDetector:
                 trackers,
                 progress_bar
             )
-            if self.report_config is not None and self.add_to_csv:
+            if hasattr(self, "report_config") and self.add_to_csv:
                 bucket_len = int(self.DURATION_TO_BE_ANALYZED // 10)# // 1 * 10)    # minutes
                 if bucket_len == 0:
                     bucket_len = 1
@@ -184,7 +194,7 @@ class EventDetector:
                     break
 
                 if self._should_process_frame(frame_idx):
-                    report_progress(self.output_dir, frame_idx, self.TOTAL_FRAMES_TO_BE_ANALYZED, self.vid_process_progress)
+                    report_progress(self.output_dir, frame_idx, self.TOTAL_FRAMES_TO_BE_ANALYZED, self.vid_process_progress, "ANALYZING GAMEPLAY")
                     detections = self._collect_detections(model, frame)
                     tracks = self._update_trackers(trackers, detections, frame)
                     self._handle_tracks(
@@ -213,7 +223,7 @@ class EventDetector:
         if self.save_clips:
             self._process_clips()
         
-        if self.save_clips and (self.create_montage or self.montage_length_sec > 0):
+        if self.save_clips and (self.create_montage and self.montage_length_sec > 0):
             self._create_montage()
 
 
