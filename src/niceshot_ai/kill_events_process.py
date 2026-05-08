@@ -69,7 +69,7 @@ class KillEventsProcessor:
             
             cap.release()
             self.analyzed_clips+=1
-            report_progress(self.output_dir, self.analyzed_clips, self.total_clips, self.progress)
+            report_progress(self.output_dir, self.analyzed_clips, self.total_clips, self.progress, "FINDING BEST KILLS...")
 
         sorted_clips_medals = sorted(clips_medals.items(), key=lambda item: item[1], reverse=True)
         final_clips = [clip_path for clip_path, _ in sorted_clips_medals]
