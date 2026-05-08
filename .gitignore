@@ -216,3 +216,4 @@ gui.py
 #*.json
 niceshot_ai_bot/
 main.py
+*.bat
