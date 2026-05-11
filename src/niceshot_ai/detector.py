@@ -104,7 +104,7 @@ class EventDetector:
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
 
-        self.percentages = set(range(3, 101, 3))
+        self.percentages = set(range(1, 101, 1))
 
     def clip_worker(self, progress_bar):
         while True:
