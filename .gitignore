@@ -212,7 +212,7 @@ __marimo__/
 
 # Extra Files
 full_app.py
-gui.py
+#gui.py
 #*.json
 niceshot_ai_bot/
 main.py
