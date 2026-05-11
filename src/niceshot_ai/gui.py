@@ -182,6 +182,13 @@ class GUI:
                 f"Analysis complete! Results saved to:\n{self.output_entry.get()}"
             )
             self.analyze_btn.config(state="normal")
+            
+            temp_files = ("status.json", "progress.json", "events_temp.json", "events_temp_2.json", "video1.csv", "timestamp_sorted.csv")
+            for file in temp_files:
+                try:
+                    os.remove(f"{self.output_entry.get()}/{file}")
+                except:
+                    pass
 
     def analyze_video(self):
         self.analyze_btn.config(state="disabled")
