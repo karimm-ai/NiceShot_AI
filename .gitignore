@@ -217,3 +217,5 @@ gui.py
 niceshot_ai_bot/
 main.py
 *.bat
+build/
+dist/
