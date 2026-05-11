@@ -22,7 +22,7 @@ class EventConfirm:
         frame = self.crop_frame(frame)
         killcam_text = self.extract_text(frame)
 
-        off_words = ("KILLCAM", "KILLGAM", "BESTPLAY", "SPECTATING:", "FINAL KILL", "BEST PLAY")
+        off_words = ("KILLCAM", "KILLGAM", "BESTPLAY", "SPECTATING:", "FINAL KILL", "BEST PLAY", "SPECTATING")
         for word in off_words:
             if word.lower() in killcam_text.lower():
                 return True
