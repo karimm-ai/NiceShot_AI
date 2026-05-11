@@ -1,5 +1,5 @@
 import argparse
-import sys
+import sys, os
 import json
 from detector import EventDetector
 from updater import check_and_update
@@ -54,6 +54,14 @@ def main():
             json.dump({"status": "failed", "error": str(e)}, f)
 
         sys.exit(1)
+    
+    temp_files = ("status.json", "progress.json", "events_temp.json", "events_temp_2.json", "video1.csv", "timestamp_sorted.csv")
+
+    for file in temp_files:
+        try:
+            os.remove(f"{args.output}/{file}")
+        except:
+            pass
 
 
 if __name__ == "__main__":
