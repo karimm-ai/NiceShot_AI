@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 class ReportMaker:
@@ -158,6 +159,123 @@ class ReportMaker:
         self.axes[self.current_axis].grid(True)
 
         self.current_axis+=1
+
+
+    def kd_ratio_timeline_chart(self, color_pallete: dict, width, height):
+        df = pd.read_csv(self.csv_file)
+
+        bucket_seconds = self.bucket_len * 60
+        df["Seconds"] = pd.to_timedelta(df["Timestamp"]).dt.total_seconds()
+        df = df.sort_values("Seconds")
+        df["Bucket"] = (df["Seconds"] // bucket_seconds).astype(int)
+
+        df.to_csv(f"{self.output_dir}/timestamp_sorted.csv", index=False)
+
+        kills_per_bucket = (
+            df[df["Event"].str.lower() == "kill"]
+            .groupby("Bucket")["Event"]
+            .count()
+            .cumsum()
+            .reset_index(name="Cumulative_Kills")
+        )
+
+        deaths_per_bucket = (
+            df[df["Event"].str.lower() == "death"]
+            .groupby("Bucket")["Event"]
+            .count()
+            .cumsum()
+            .reset_index(name="Cumulative_Deaths")
+        )
+
+        stats = pd.merge(
+            kills_per_bucket,
+            deaths_per_bucket,
+            on="Bucket",
+            how="outer"
+        )
+
+        stats[["Cumulative_Kills", "Cumulative_Deaths"]] = (
+            stats[["Cumulative_Kills", "Cumulative_Deaths"]]
+            .ffill()
+            .fillna(0)
+        )
+
+        stats["KD_Ratio"] = np.where(
+            stats["Cumulative_Deaths"] > 0,
+            stats["Cumulative_Kills"] / stats["Cumulative_Deaths"],
+            stats["Cumulative_Kills"]
+        )
+
+        stats["KD_Ratio"] = stats["KD_Ratio"].round(2)
+        stats["Minutes"] = (stats["Bucket"] + 1) * (bucket_seconds / 60)
+
+        stats["Time_HHMMSS"] = (
+            pd.to_timedelta(stats["Minutes"], unit='m')
+            .astype(str)
+            .str.replace("0 days ", "", regex=False)
+        )
+
+        self.axes[self.current_axis].set_facecolor(
+            color_pallete["chart_color"]
+        )
+
+        line_kdr, = self.axes[self.current_axis].plot(
+            stats["Time_HHMMSS"],
+            stats["KD_Ratio"],
+            label="K/D Ratio",
+            marker='o',
+            linewidth=2,
+            color=color_pallete['elements_color']
+        )
+
+        for x, y in zip(
+            line_kdr.get_xdata(),
+            line_kdr.get_ydata()
+        ):
+            self.axes[self.current_axis].annotate(
+                f"{y:.2f}",
+                (x, y),
+                textcoords="offset points",
+                xytext=(0, 6),
+                ha='center',
+                color=color_pallete["font_color"]
+            )
+
+        self.axes[self.current_axis].axhline(
+            y=1,
+            color='gray',
+            linestyle='--',
+            alpha=0.6
+        )
+
+        tick_minutes = [b for b in stats["Time_HHMMSS"]]
+
+        self.axes[self.current_axis].set_xticklabels(
+            tick_minutes,
+            color=color_pallete["font_color"],
+            rotation=65
+        )
+
+        self.axes[self.current_axis].tick_params(
+            axis='y',
+            colors=color_pallete["font_color"]
+        )
+
+        self.axes[self.current_axis].set_ylabel(
+            "K/D Ratio",
+            color=color_pallete["font_color"]
+        )
+
+        self.axes[self.current_axis].set_title(
+            f"K/D Ratio Over Time (Buckets of {bucket_seconds // 60} min)",
+            color=color_pallete["font_color"],
+            loc='left'
+        )
+
+        self.axes[self.current_axis].legend()
+        self.axes[self.current_axis].grid(True)
+
+        self.current_axis += 1
 
 
     def save_report(self, report_num: int):
