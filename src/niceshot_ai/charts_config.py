@@ -7,6 +7,9 @@ cod_bo6_chart_config = {"charts": [
                              "height": 10},
                             {"name": "kd_timeline_chart",
                              "width": 5,
+                             "height": 10},
+                             {"name": "kd_ratio_timeline_chart",
+                             "width": 5,
                              "height": 10}],
 
                         "color_pallete": {
@@ -26,6 +29,9 @@ cod_bo7_chart_config = {"charts": [
                              "width": 1,
                              "height": 10},
                             {"name": "kd_timeline_chart",
+                             "width": 5,
+                             "height": 10},
+                             {"name": "kd_ratio_timeline_chart",
                              "width": 5,
                              "height": 10}],
 
