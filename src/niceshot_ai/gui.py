@@ -218,7 +218,7 @@ class GUI:
             base_dir = Path(__file__).resolve().parent
 
         # Go up levels like your original logic
-        root_dir = base_dir.parent.parent
+        root_dir = base_dir.parent.parent.parent
 
         python_file = root_dir / ".venv" / "Scripts" / "python.exe"
         cli_file = base_dir / "niceshot_ai.py"
