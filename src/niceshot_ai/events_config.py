@@ -3,7 +3,7 @@ from trackers import DeathTracker
 
 
 cod_bo6_config = {
-    "Kill": {"pre": 2,
+    "Kill": {"pre": 3,
              "post": 2,
              'tracker': DeepSort(max_age=3, n_init=1),
              'cls_label': 0,
@@ -16,17 +16,17 @@ cod_bo6_config = {
               'conf_thres': 0.9,
               'confirm_event': True},
 
-    "Death": {"pre": 2,
-              "post": 1,
+    "Death": {"pre": 3,
+              "post": 1.5,
               'tracker': DeathTracker(max_age=18),
               'cls_label': 2,
-              'conf_thres': 0.82,
+              'conf_thres': 0.75,
               'clip_eligible': True}
 }
 
 
 cod_bo7_config = {
-    "Kill": {"pre": 2,
+    "Kill": {"pre": 3,
              "post": 2,
              'tracker': DeepSort(max_age=3, n_init=1),
              'cls_label': 0,
@@ -39,10 +39,10 @@ cod_bo7_config = {
               'conf_thres': 0.9,
               'confirm_event': True},
 
-    "Death": {"pre": 2,
-              "post": 1,
+    "Death": {"pre": 3,
+              "post": 1.5,
               'tracker': DeathTracker(max_age=18),
               'cls_label': 2,
-              'conf_thres': 0.82,
+              'conf_thres': 0.75,
               'clip_eligible': True}
 }
