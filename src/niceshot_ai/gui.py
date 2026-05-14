@@ -6,7 +6,8 @@ from tkinter import font, ttk
 import subprocess
 from pathlib import Path
 import importlib.util
-
+import tempfile
+import urllib.request
 
 
 class GUI:
@@ -21,9 +22,11 @@ class GUI:
             should_restart = updater.check_and_update()
 
         except Exception as e:
+            #messagebox.showinfo("HI", f"{updater_path}, {should_restart}")
             print(f"[Updater] Failed to load updater: {e}")
             should_restart = False
         if should_restart:
+            messagebox.showinfo("Update", "NiceShot AI updated")
             subprocess.Popen([
                 sys.executable,
                 os.path.join(Path(sys.executable).resolve().parent, "NiceShot AI.exe")
