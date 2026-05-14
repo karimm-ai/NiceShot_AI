@@ -5,13 +5,24 @@ import os, json, sys
 from tkinter import font, ttk
 import subprocess
 from pathlib import Path
+import importlib.util
 
-from updater import check_and_update
 
 
 class GUI:
     def __init__(self, root):
-        should_restart = check_and_update()
+        try:
+            updater_path = Path(sys.executable).resolve().parent / "updater.py"
+
+            spec = importlib.util.spec_from_file_location("updater", updater_path)
+            updater = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(updater)
+
+            should_restart = updater.check_and_update()
+
+        except Exception as e:
+            print(f"[Updater] Failed to load updater: {e}")
+            should_restart = False
         if should_restart:
             subprocess.Popen([
                 sys.executable,

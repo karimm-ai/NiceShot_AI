@@ -22,7 +22,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        check_and_update()
+        #check_and_update()
         
         detector = EventDetector(
             args.game,
