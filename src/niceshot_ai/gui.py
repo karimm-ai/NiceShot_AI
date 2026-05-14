@@ -13,7 +13,8 @@ class GUI:
         self.root.title("NiceShot AI")
         self.root.geometry("500x450")
         self.root.configure(bg="#dcb561")
-        self.root.iconbitmap(Path(__file__).resolve().parent / "icon.ico")
+        icon_path = Path(sys.executable).resolve().parent / "icon.ico"
+        self.root.iconbitmap(icon_path)
         
         bold_font = font.Font(size=9, family='anonymous pro')
         style = ttk.Style()
