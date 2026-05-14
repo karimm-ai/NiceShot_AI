@@ -219,4 +219,3 @@ main.py
 *.bat
 build/
 dist/
-*.ico
