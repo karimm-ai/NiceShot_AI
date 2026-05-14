@@ -228,15 +228,15 @@ class GUI:
         print(save_clips, create_compilation, vert, analysis, choosen_game, montage_len_seconds)
         
         if not input_path or not os.path.isfile(input_path):
-            messagebox.showerror("Error", "Please select a valid input video")
+            messagebox.showerror("Error", "Please select a valid input video!")
             self.analyze_btn.config(state="normal")
             return
         if not output_path or not os.path.isdir(output_path):
-            messagebox.showerror("Error", "Please select a valid output folder")
+            messagebox.showerror("Error", "Please select a valid output folder!")
             self.analyze_btn.config(state="normal")
             return 
         if not save_clips and not create_compilation and not analysis:
-            messagebox.showerror("Error", "Please tick a relevant checkbox")
+            messagebox.showerror("Error", "Please tick a relevant checkbox!")
             self.analyze_btn.config(state="normal")
             return
         
