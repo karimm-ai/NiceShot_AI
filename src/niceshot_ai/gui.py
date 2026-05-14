@@ -6,9 +6,20 @@ from tkinter import font, ttk
 import subprocess
 from pathlib import Path
 
+from updater import check_and_update
+
 
 class GUI:
     def __init__(self, root):
+        should_restart = check_and_update()
+        if should_restart:
+            subprocess.Popen([
+                sys.executable,
+                os.path.join(Path(sys.executable).resolve().parent, "NiceShot AI.exe")
+            ])
+
+            sys.exit(0)
+
         self.root = root
         self.root.title("NiceShot AI")
         self.root.geometry("500x450")

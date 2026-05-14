@@ -130,3 +130,5 @@ def check_and_update():
         os.execv(sys.executable, [sys.executable] + sys.argv)
     else:
         print("[Updater] Update failed. Running current version.")
+    
+    return success
