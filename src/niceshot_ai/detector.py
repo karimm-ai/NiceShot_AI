@@ -132,9 +132,9 @@ class EventDetector:
 
         for video_index, video_path in enumerate(self.video_path, start=1):
             self.csv_file = f"video{video_index}.csv"
-            reencoded_video_path = reencode_to_h264(video_path, self.output_dir)
+            #reencoded_video_path = reencode_to_h264(video_path, self.output_dir)
             self._process_video(
-                reencoded_video_path,
+                video_path,
                 video_index,
                 model,
                 trackers,
@@ -152,7 +152,7 @@ class EventDetector:
                     func(self.report_config["color_pallete"], chart["width"], chart["height"])
                 #report.fig.show()
                 report.save_report(video_index)
-            os.remove(reencoded_video_path)
+            #os.remove(reencoded_video_path)
 
         
     def _update_progress(self, frame_idx: int, pbar, progress_bar = None):
@@ -195,7 +195,7 @@ class EventDetector:
                 if not ret:
                     break
 
-                if frame is not None and self._should_process_frame(frame_idx):
+                if self._should_process_frame(frame_idx):
                     report_progress(self.output_dir, frame_idx, self.TOTAL_FRAMES_TO_BE_ANALYZED, self.vid_process_progress, "ANALYZING GAMEPLAY")
                     detections = self._collect_detections(model, frame)
                     tracks = self._update_trackers(trackers, detections, frame)
