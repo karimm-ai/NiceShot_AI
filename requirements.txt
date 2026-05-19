@@ -9,3 +9,4 @@ yt_dlp==2025.10.22
 onnxruntime
 easyocr
 #discord
+#scikit-learn

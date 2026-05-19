@@ -4,7 +4,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
-import os, time, subprocess
+import os, time
 
 
 class TwitchHandler:
@@ -139,25 +139,3 @@ class TwitchHandler:
             for file in os.listdir(f"{self.output_dir}/Downloads"):
                 if not file.endswith('.mp4') or 'temp' in file:
                     os.remove(f"{self.output_dir}/Downloads/{file}")
-
-
-    def reencode_to_h264(self, input_file):
-        output_file = f"{self.output_dir}/{input_file.rsplit('.', 1)[0] + '_fixed.mp4'}"
-
-        cmd = [
-            "ffmpeg",
-            "-y",                      # overwrite
-            "-i", input_file,
-            "-c:v", "libx264",         # convert video → H.264
-            "-preset", "fast",
-            "-crf", "23",              # quality (lower = better)
-            "-c:a", "aac",             # audio
-            output_file
-        ]
-
-        try:
-            subprocess.run(cmd, check=True)
-            return output_file
-        except subprocess.CalledProcessError as e:
-            print(f"FFmpeg failed: {e}")
-            return None

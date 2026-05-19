@@ -84,3 +84,34 @@ def report_progress(output_dir, numerator, denominator, progress, msg):
         with open(f"{output_dir}/progress.json", "w") as file:
             json.dump({"PROGRESS": current_percent, "MSG": msg}, file)
         progress.discard(current_percent)
+
+
+def reencode_to_h264(input_file, output_dir):
+        input_path = Path(input_file)
+        output_file = (
+            Path(output_dir)
+            / f"{input_path.stem}_fixed.mp4"
+        )
+
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-err_detect", "ignore_err",
+            "-i", str(input_path),
+            "-c:v", "libx264",
+            "-preset", "fast",
+            "-crf", "18",
+            "-vsync", "1",
+            "-c:a", "aac",
+            "-b:a", "192k",
+            "-movflags", "+faststart",
+            str(output_file)
+        ]
+
+        try:
+            subprocess.run(cmd, check=True)
+            return str(output_file)
+
+        except subprocess.CalledProcessError as e:
+            print(f"FFmpeg failed: {e}")
+            return None

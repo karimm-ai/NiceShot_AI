@@ -3,7 +3,7 @@ from video_clipper import Clipper
 from kill_events_process import KillEventsProcessor
 from event_types import Event
 from montage import Montage
-from utils import add_to_csv_, resource_path, add_to_json, move_clips_to_folder, report_progress
+from utils import add_to_csv_, resource_path, add_to_json, move_clips_to_folder, report_progress, reencode_to_h264
 from event_confirm import EventConfirm
 from report import ReportMaker
 
@@ -97,7 +97,7 @@ class EventDetector:
         if self.add_to_csv:
             self.events_csv = []
             self.events_csv_lock = threading.Lock()
-        
+
         logging.basicConfig(
             filename="tracker.log",
             level=logging.INFO,
@@ -132,8 +132,9 @@ class EventDetector:
 
         for video_index, video_path in enumerate(self.video_path, start=1):
             self.csv_file = f"video{video_index}.csv"
+            reencoded_video_path = reencode_to_h264(video_path, self.output_dir)
             self._process_video(
-                video_path,
+                reencoded_video_path,
                 video_index,
                 model,
                 trackers,
@@ -151,6 +152,7 @@ class EventDetector:
                     func(self.report_config["color_pallete"], chart["width"], chart["height"])
                 #report.fig.show()
                 report.save_report(video_index)
+            os.remove(reencoded_video_path)
 
         
     def _update_progress(self, frame_idx: int, pbar, progress_bar = None):
