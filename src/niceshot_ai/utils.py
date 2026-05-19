@@ -83,4 +83,4 @@ def report_progress(output_dir, numerator, denominator, progress, msg):
     if current_percent in progress:
         with open(f"{output_dir}/progress.json", "w") as file:
             json.dump({"PROGRESS": current_percent, "MSG": msg}, file)
-        progress.remove(current_percent)
+        progress.discard(current_percent)
