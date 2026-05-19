@@ -219,3 +219,5 @@ main.py
 *.bat
 build/
 dist/
+cvat/
+Training/
