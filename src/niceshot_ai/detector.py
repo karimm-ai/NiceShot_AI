@@ -193,7 +193,7 @@ class EventDetector:
                 if not ret:
                     break
 
-                if self._should_process_frame(frame_idx):
+                if frame is not None and self._should_process_frame(frame_idx):
                     report_progress(self.output_dir, frame_idx, self.TOTAL_FRAMES_TO_BE_ANALYZED, self.vid_process_progress, "ANALYZING GAMEPLAY")
                     detections = self._collect_detections(model, frame)
                     tracks = self._update_trackers(trackers, detections, frame)
