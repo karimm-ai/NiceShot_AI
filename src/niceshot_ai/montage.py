@@ -78,7 +78,8 @@ class Montage:
             list_file = os.path.join(input_folder, "merge.txt")
             with open(list_file, "w") as f:
                 for t in temp_outputs:
-                    f.write(f"file '{t}'\n")
+                    abs_path = os.path.abspath(t).replace("\\", "/")
+                    f.write(f"file '{abs_path}'\n")
 
             subprocess.run([
                 "ffmpeg",
