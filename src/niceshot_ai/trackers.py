@@ -219,6 +219,4 @@ class MedalTracker:
                     "missed": track.missed,
                     "locked": track.locked
                 })
-                print(results)
-
         return results
