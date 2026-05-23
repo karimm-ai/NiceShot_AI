@@ -317,8 +317,8 @@ class EventDetector:
         for key, val in tracks.items():
             if key not in processed_event_tracks:
                 for track in tracks.get(key, []):
-                    if track.track_id not in temp_ids[key]:
-                        temp_ids[key].add(track.track_id)
+                    if track['track_id'] not in temp_ids[key]:
+                        temp_ids[key].add(track['track_id'])
                         if self.add_to_csv:
                             timestamp = time.strftime("%H:%M:%S", time.gmtime(self.cap.get(cv2.CAP_PROP_POS_MSEC) / 1000))
                             with self.events_csv_lock:
