@@ -40,7 +40,7 @@ YOLOv8n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned
 - **Events Timestamping & CSV Output**: Timestamps detected events and dumps into a CSV file with 2 columns [Timestamp, Event] for further gameplay data analysis and inspections.
 - **Session Analysis**: Creates a summary report consisting of multiple charts providing a post-session stats analysis.
 
-![Report Screenshot](summary_report1.png)
+![Report Screenshot](sample_report.png)
 
 ---
 
