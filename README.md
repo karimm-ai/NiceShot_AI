@@ -24,6 +24,13 @@ Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 |    Medal   |  When a medal earned by the player pops up during gameplay    |              -              |
 |    Death   |  When player gets eliminated during gameplay                |                -              |
 
+- **Call of Duty: Modern Warfare II (2022) --> Still in testing**
+
+| Key events |                        Description                            |          Limitations        |
+|------------|---------------------------------------------------------------|-----------------------------
+|    Kill    |  Gun kills                                  |  -  |
+|    Death   |  When player gets eliminated during gameplay                |                -              |
+
 ---
 
 ### **Model Description**
