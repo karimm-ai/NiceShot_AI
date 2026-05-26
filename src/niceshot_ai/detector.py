@@ -43,7 +43,7 @@ class EventDetector:
         if game_name.lower()  == "call of duty: black ops 6":
             from events_config import cod_bo6_config
             self.events_config = cod_bo6_config
-            self.model_path = resource_path("../game_models/yolov8n-cod_bo6.pt")
+            self.model_path = resource_path("game_models/yolov8n-cod_bo6.pt")
         
             if session_analysis:
                 from charts_config import cod_bo6_chart_config
@@ -52,7 +52,7 @@ class EventDetector:
         elif game_name.lower() == "call of duty: black ops 7":
             from events_config import cod_bo7_config
             self.events_config = cod_bo7_config
-            self.model_path = resource_path("../game_models/yolov8n-cod_bo7.pt")
+            self.model_path = resource_path("game_models/yolov8n-cod_bo7.pt")
 
             if session_analysis:
                 from charts_config import cod_bo7_chart_config
@@ -73,7 +73,7 @@ class EventDetector:
         self.montage_length_sec = montage_length_sec
         self.vertical_format = vertical_format
 
-        self.ffmpeg_path = resource_path("ffmpeg.exe")
+        self.ffmpeg_path = resource_path("src/niceshot_ai/ffmpeg.exe")
         print(f"FFMPEG PATH: {self.ffmpeg_path}")
 
         if advanced_detection:
