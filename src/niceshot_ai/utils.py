@@ -35,7 +35,10 @@ def add_to_csv_(output_dir: str, filename: str, events: list):
 def resource_path(filename: str) -> str:
     if getattr(sys, 'frozen', False):
         return os.path.join(sys._MEIPASS, filename)
-    return filename
+    else:
+        base_path = Path(__file__).resolve().parent.parent.parent
+
+    return base_path / filename
 
 
 def add_to_json(filename: str, events: list):
