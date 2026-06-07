@@ -13,7 +13,7 @@ Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 | Key events |                        Description                            |          Limitations        |
 |------------|---------------------------------------------------------------|-----------------------------
 |    Kill    |  Gun kills                                  |  Only face-to-face gun kills|
-|    Medal   |  When a medal earned by the player pops up during gameplay    |              -              |
+|    Medal   |  When a medal earned by the player pops up during gameplay    |              Medal type not detected, only count              |
 |    Death   |  When player gets eliminated during gameplay                |                -              |
 
 - **Call of Duty: Black Ops 6 (2024)**
@@ -21,7 +21,7 @@ Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 | Key events |                        Description                            |          Limitations        |
 |------------|---------------------------------------------------------------|-----------------------------
 |    Kill    |  Gun kills                                  |  Only face-to-face gun kills|
-|    Medal   |  When a medal earned by the player pops up during gameplay    |              -              |
+|    Medal   |  When a medal earned by the player pops up during gameplay    |              Medal type not detected, only count              |
 |    Death   |  When player gets eliminated during gameplay                |                -              |
 
 - **Call of Duty: Modern Warfare II (2022) --> Still in testing**
@@ -64,8 +64,7 @@ YOLOv8n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned
 
 ### **Limitations**
 
-- **An event may get detected more than one time or not detected at all**: From my testing, an event getting detected more than once is more likely than not getting detected at all which means more tuning should be done on the tracker algorithm.
-- **Only 1 supported game for now**
+- **Event detection is not perfect**: From my testing, an event can get detected more than once or not detected at all.
 
 ---
 
@@ -81,7 +80,7 @@ python -m venv venv
 venv\Scripts\activate
 ```
 
-Install torch cuda. What worked for me is cuda 12.1:
+Install torch cuda. I used cuda 12.1 for GTX1650 4GB. Currently, I am using nightly cuda 12.8 for RTX5070 8GB:
 ```bash
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 ```
@@ -122,12 +121,12 @@ detector.detect_events()
 
 ### **Processing Speed**
 
-Tested on my new laptop with the following specs:
+Tested on laptop_1 with the following specs:
 - **CPU**: core i9 14th gen
 - **GPU**: RTX5070 8GB
 - **RAM**: 32GB
 
-Tested on my old laptop with the following specs:
+Tested on laptop_2 with the following specs:
 - **CPU**: core i7 10th gen
 - **GPU**: GTX1650 4GB
 - **RAM**: 16GB
@@ -135,16 +134,12 @@ Tested on my old laptop with the following specs:
 
 |    Device   | Frame Inference |
 |-------------|-----------------|
-| New laptop  |  Up to 170 FPS with frames_to_skip = 5|
-| Old laptop  |  Up to 60 FPS with frames_to_skip = 5|
+| laptop_1  |  Up to 170 FPS with frames_to_skip = 5|
+| laptop_2  |  Up to 60 FPS with frames_to_skip = 5|
 
 
 #### **Advanced Detection with OCR**
 
 This is run only to confirm an event after it's detected. Not through the whole video frames. It can cause the processing speed to fall down from 170 FPS to 30 FPS (on new laptop) temporarily until event is confirmed. It can definitely be turned off, however this will cause a kill event during "SPECTATING" to be counted.
-
----
-
-#### **Open to full ownership transfer. Contact me: niceshot.ai@gmail.com**
 
 ---
