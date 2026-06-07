@@ -12,28 +12,6 @@ import importlib.util
 
 class GUI:
     def __init__(self, root):
-        # try:
-        #     updater_path = Path(sys.executable).resolve().parent / "updater.py"
-
-        #     spec = importlib.util.spec_from_file_location("updater", updater_path)
-        #     updater = importlib.util.module_from_spec(spec)
-        #     spec.loader.exec_module(updater)
-
-        #     should_restart = updater.check_and_update()
-
-        # except Exception as e:
-        #     #messagebox.showinfo("HI", f"{updater_path}, {should_restart}")
-        #     print(f"[Updater] Failed to load updater: {e}")
-        #     should_restart = False
-        # if should_restart:
-        #     messagebox.showinfo("Update", "NiceShot AI updated")
-        #     subprocess.Popen([
-        #         sys.executable,
-        #         os.path.join(Path(sys.executable).resolve().parent, "NiceShot AI.exe")
-        #     ])
-
-        #     sys.exit(0)
-
         self.root = root
         self.root.title("NiceShot AI")
         self.root.geometry("500x450")
