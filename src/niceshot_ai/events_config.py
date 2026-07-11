@@ -11,17 +11,17 @@ cod_bo6_config = {
              'confirm_event': True,
              'clip_eligible': True},
 
-    "Medal": {'tracker': DeepSort(max_age=30, nms_max_overlap=0.01),
-              'cls_label': 1,
-              'conf_thres': 0.9,
-              'confirm_event': True},
+    # "Medal": {'tracker': DeepSort(max_age=30, nms_max_overlap=0.01),
+    #           'cls_label': 1,
+    #           'conf_thres': 0.9,
+    #           'confirm_event': True},
 
     "Death": {"pre": 3,
               "post": 1.5,
               'tracker': DeathTracker(max_age=18),
               'cls_label': 2,
               'conf_thres': 0.75,
-              'clip_eligible': True}
+              'clip_eligible': False}
 }
 
 
@@ -30,19 +30,19 @@ cod_bo7_config = {
              "post": 2,
              'tracker': DeepSort(max_age=3, n_init=1),
              'cls_label': 0,
-             'conf_thres': 0.55,
+             'conf_thres': 0.46,
              'confirm_event': True,
              'clip_eligible': True},
 
-    "Medal": {'tracker': MedalTracker(),
-              'cls_label': 1,
-              'conf_thres': 0.88,
-              'confirm_event': True},
+    # "Medal": {'tracker': MedalTracker(),
+    #           'cls_label': 1,
+    #           'conf_thres': 0.88,
+    #           'confirm_event': True},
 
     "Death": {"pre": 3,
               "post": 1.5,
               'tracker': DeathTracker(max_age=18),
               'cls_label': 2,
-              'conf_thres': 0.75,
-              'clip_eligible': True}
+              'conf_thres': 0.8,
+              'clip_eligible': False}
 }

@@ -221,3 +221,4 @@ build/
 dist/
 cvat/
 Training/
+main2.py

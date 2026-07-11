@@ -12,6 +12,7 @@ class Event:
     video_num: int
     timestamp: str = ""
     desc: str = ""
+    kills: int = 0
     
     def __post_init__(self):
         self.timestamp = time.strftime("%H:%M:%S", time.gmtime(self.timestart))
@@ -24,5 +25,6 @@ class Event:
             "timestart": self.timestart,
             "timeend": self.timeend,
             "timestamp": self.timestamp,
-            "desc": self.desc
+            "desc": self.desc,
+            "kills": self.kills
         }

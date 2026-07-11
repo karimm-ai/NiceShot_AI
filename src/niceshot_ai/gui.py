@@ -5,9 +5,6 @@ import os, json, sys
 from tkinter import font, ttk
 import subprocess
 from pathlib import Path
-import importlib.util
-# import tempfile
-# import urllib.request
 
 
 class GUI:
@@ -56,7 +53,7 @@ class GUI:
         self.save_clips = tk.BooleanVar()
         self.create_compilation = tk.BooleanVar()
         self.vertical_format = tk.BooleanVar()
-        self.analysis = tk.BooleanVar()
+        #self.analysis = tk.BooleanVar()
         bg_color = "#dcb561"   # deep violet
         fg_color = "black"
 
@@ -82,12 +79,12 @@ class GUI:
         cb1 = tk.Checkbutton(frame, text="Save Clips", variable=self.save_clips, **cb_options, font=bold_font)
         cb2 = tk.Checkbutton(frame, text="Create Compilation", variable=self.create_compilation, **cb_options, font=bold_font)
         cb3 = tk.Checkbutton(frame, text="Save clips in vertical format", variable=self.vertical_format, **cb_options, font=bold_font)
-        cb4 = tk.Checkbutton(frame, text="Create Session Analysis Report", variable=self.analysis, **cb_options, font=bold_font)
+        #cb4 = tk.Checkbutton(frame, text="Create Session Analysis Report", variable=self.analysis, **cb_options, font=bold_font)
 
         cb1.grid(row=0, column=0, padx=0, pady=3, sticky="w")
         cb2.grid(row=0, column=1, padx=0, pady=3, sticky="w")
         cb3.grid(row=1, column=0, padx=0, pady=3, sticky="w")
-        cb4.grid(row=1, column=1, padx=0, pady=3, sticky="w")
+        #cb4.grid(row=1, column=1, padx=0, pady=3, sticky="w")
 
         comp_frame = tk.Frame(root, bg="#dcb561")
         comp_frame.pack(fill="x", padx=20, anchor="w")
@@ -202,11 +199,11 @@ class GUI:
         save_clips = self.save_clips.get()
         create_compilation = self.create_compilation.get()
         vert = self.vertical_format.get()
-        analysis = self.analysis.get()
+        #analysis = self.analysis.get()
         choosen_game = self.combo.get()
         montage_len_seconds = int(self.spin.get())*60
 
-        print(save_clips, create_compilation, vert, analysis, choosen_game, montage_len_seconds)
+        print(save_clips, create_compilation, vert, choosen_game, montage_len_seconds)#analysis, 
         
         if not input_path or not os.path.isfile(input_path):
             messagebox.showerror("Error", "Please select a valid input video!")
@@ -216,7 +213,7 @@ class GUI:
             messagebox.showerror("Error", "Please select a valid output folder!")
             self.analyze_btn.config(state="normal")
             return 
-        if not save_clips and not create_compilation and not analysis:
+        if not save_clips and not create_compilation:# and not analysis:
             messagebox.showerror("Error", "Please tick a relevant checkbox!")
             self.analyze_btn.config(state="normal")
             return
@@ -248,8 +245,8 @@ class GUI:
         if vert:
             args.append("--vertical_format")
 
-        if analysis:
-            args.append("--session_analysis")
+        # if analysis:
+        #     args.append("--session_analysis")
 
         if save_clips:
             args.append("--save_clips")

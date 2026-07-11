@@ -116,9 +116,11 @@ class KillEventsProcessor:
         merged = []
         for streak in kill_streaks:
             if len(streak) > 1:
-                merged.append(Event("KillStreak",
-                    streak[0]["timestart"],
-                    streak[-1]["timeend"], video_num))
+                merged.append(Event(type="KillStreak",
+                    timestart=streak[0]["timestart"],
+                    timeend=streak[-1]["timeend"],
+                    video_num=video_num,
+                    kills=len(streak)))
 
         merged = [event.to_dict() for event in merged]
         for event in events:

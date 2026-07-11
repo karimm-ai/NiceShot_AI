@@ -52,7 +52,7 @@ class EventDetector:
         elif game_name.lower() == "call of duty: black ops 7":
             from events_config import cod_bo7_config
             self.events_config = cod_bo7_config
-            self.model_path = resource_path("game_models/yolov8n-cod_bo7.pt")
+            self.model_path = resource_path("game_models/yolov11n-cod_bo7.pt")
 
             if session_analysis:
                 from charts_config import cod_bo7_chart_config
