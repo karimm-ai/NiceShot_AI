@@ -394,14 +394,14 @@ class EventDetector:
     def _create_montage(self):
         montage = Montage()
 
-        if "Kill" in self.events_config:
-            best_kill_clips = self.kills_proc.find_best_kills()
-            new_folder = ''.join((self.output_dir, '/best_kill_clips'))
-            os.makedirs(new_folder, exist_ok=True)
-            move_clips_to_folder(best_kill_clips, self.montage_length_sec, self.output_dir, new_folder)
+        # if "Kill" in self.events_config:
+        #     best_kill_clips = self.kills_proc.find_best_kills()
+        #     new_folder = ''.join((self.output_dir, '/best_kill_clips'))
+        #     os.makedirs(new_folder, exist_ok=True)
+        #     move_clips_to_folder(best_kill_clips, self.montage_length_sec, self.output_dir, new_folder)
 
         for dir in os.listdir(self.output_dir):
-            if os.path.isdir(os.path.join(self.output_dir, dir)) and dir not in ("Kill", "KillStreak"):
+            if os.path.isdir(os.path.join(self.output_dir, dir)) and dir not in ("KillStreak"):#,"Kill"
                 clips = []
                 for clip in os.listdir(os.path.join(self.output_dir, dir)):
                     if clip.endswith("mp4"):
