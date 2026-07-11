@@ -123,9 +123,9 @@ class KillEventsProcessor:
                     kills=len(streak)))
 
         merged = [event.to_dict() for event in merged]
-        for event in events:
-            if event not in temp_events:
-                merged.append(event)
+        # for event in events:
+        #     if event not in temp_events:
+        #         merged.append(event)
         del temp_events, events, kill_streaks, current_streak
 
         with open(f"{self.output_dir}/events_temp_2.json", 'w') as f:
