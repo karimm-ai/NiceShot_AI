@@ -115,7 +115,7 @@ class KillEventsProcessor:
 
         merged = []
         for streak in kill_streaks:
-            if len(streak) > 1:
+            if len(streak) > 6:
                 merged.append(Event(type="KillStreak",
                     timestart=streak[0]["timestart"],
                     timeend=streak[-1]["timeend"],
