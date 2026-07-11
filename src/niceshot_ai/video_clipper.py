@@ -30,7 +30,6 @@ class Clipper:
             "-movflags", "+faststart",
             "-loglevel", "error",
             "-y",
-
             output_path
             ])
         
@@ -39,7 +38,7 @@ class Clipper:
                 self.ffmpeg_path,
                 "-ss", str(event['timestart']),
                 "-i", video_path,
-                "-t", str(event['timeend'] - event['timestart']),
+                "-to", str(event['timeend'] - event['timestart']),
                 "-filter:v",
                 f"crop={self.crop_width}:{self.crop_height}:{self.x_offset}:{self.y_offset},scale=1080:1920,setsar=1",
                 "-c:v", "libx264",
@@ -48,6 +47,7 @@ class Clipper:
                 "-c:a", "aac",
                 "-b:a", "192k",
                 "-movflags", "+faststart",
+                "-loglevel", "error",
                 "-y",
                 output_path
             ]

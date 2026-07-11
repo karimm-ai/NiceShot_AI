@@ -401,7 +401,7 @@ class EventDetector:
         #     move_clips_to_folder(best_kill_clips, self.montage_length_sec, self.output_dir, new_folder)
 
         for dir in os.listdir(self.output_dir):
-            if os.path.isdir(os.path.join(self.output_dir, dir)) and dir not in ("KillStreak"):#,"Kill"
+            if os.path.isdir(os.path.join(self.output_dir, dir)) and dir not in ("Kill"):#,"KillStreak"
                 clips = []
                 for clip in os.listdir(os.path.join(self.output_dir, dir)):
                     if clip.endswith("mp4"):
