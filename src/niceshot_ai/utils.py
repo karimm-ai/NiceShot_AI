@@ -42,8 +42,6 @@ def resource_path(filename: str) -> str:
 
 
 def add_to_json(filename: str, events: list):
-    #filename = get_data_path(filename)
-    #filename.parent.mkdir(parents=True, exist_ok=True)
     if os.path.exists(filename):
         try:
             with open(filename, "r") as f:
@@ -61,6 +59,9 @@ def add_to_json(filename: str, events: list):
 
 def move_clips_to_folder(clips_paths: list, montage_length: int, output_dir: str, new_folder: str):
     print(f"Moving clips to {output_dir}/{new_folder}\n")
+
+    root_dir = Path(output_dir)
+    
     final_clips = []
     current_length = 0
     while current_length <= montage_length:
@@ -68,8 +69,12 @@ def move_clips_to_folder(clips_paths: list, montage_length: int, output_dir: str
             break
         
         vid_path = clips_paths.pop(0)#[0]
-        final_clips.append(vid_path)
-        current_length += get_duration(vid_path)
+        vid_path = list(root_dir.rglob(vid_path))[0]
+        print(vid_path)
+
+        if vid_path:
+            final_clips.append(vid_path)
+            current_length += get_duration(vid_path)
 
     for clip in final_clips:
         shutil.copy(clip, new_folder)
