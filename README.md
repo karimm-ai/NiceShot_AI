@@ -4,6 +4,15 @@ NiceShot AI is a Python tool powered by computer vision to analyze gameplay vide
 
 Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 
+<p align="center">
+  Download automated installation
+</p>
+
+<p align="center">
+  <a href="https://niceshot-ai.itch.io/niceshot-ai">
+    <img src="https://img.shields.io/badge/Download%20Tool-itch.io-FA5C5C?style=for-the-badge&logo=itchdotio&logoColor=white" alt="Download Tool">
+  </a>
+</p>
 ---
 
 ### **Supported Games**
@@ -35,7 +44,7 @@ Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 
 ### **Model Description**
 
-YOLOv8n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned on custom collected & annotated dataset of gameplay videos under CC license.
+YOLOv8n & YOLO11n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned on custom collected & annotated dataset of gameplay videos under CC license.
 
 ---
 
@@ -55,8 +64,8 @@ YOLOv8n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned
 
 - **Event Auto-Clipping**: Clipping detected events using event's start time and end time.
 - **Clips Export in 16:9 & TikTok formats**
-- **Creating Highlight Reels**: Concatenating all clips within a folder into one compilation video with simple fade in & out transition edits between clips in both vertical & horizontal formats.
-- **Custom Reel Lengths**: Allowing for creating compilations of any length from the extracted clips.
+- **Creating Highlight Compilations**: Concatenating all clips within a folder into one compilation video with simple fade in & out transition edits between clips in both vertical & horizontal formats.
+- **Custom Compilation Lengths**: Allowing for creating compilations of any length from the extracted clips.
 - **Analyzing videos in bulk from a Twitch channel**: Downloads and analyzes desired game streams from a Twitch channel performing bulk analysis of gameplay videos. (In testing)
 - **Ranking Special Clips**: Ex. (Hot Kill Clips where multiple medals pop up during the event).
 
@@ -70,7 +79,7 @@ YOLOv8n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned
 
 ### **Installation**
 
-To get started with **NiceShot_AI**, download & install ffmpeg from the official website: https://www.ffmpeg.org/download.html first and add it to your PATH.
+To get started with **NiceShot_AI**, clone the repository first.
 
 #### **Second: Install the Dependencies**
 Create a Python virtual environment (optional, but recommended). My Python version is 3.10.11
@@ -140,6 +149,33 @@ Tested on laptop_2 with the following specs:
 
 #### **Advanced Detection with OCR**
 
-This is run only to confirm an event after it's detected. Not through the whole video frames. It can cause the processing speed to fall down from 170 FPS to 30 FPS (on new laptop) temporarily until event is confirmed. It can definitely be turned off, however this will cause a kill event during "SPECTATING" to be counted.
+This is run only to confirm an event after it's detected. Not through the whole video frames. It can cause the processing speed to fall down from 170 FPS to 30 FPS (laptop_2) temporarily until event is confirmed. It can definitely be turned off, however this will cause a kill event during "SPECTATING" to be counted.
 
 ---
+
+#### **Minimum System Requirements**
+
+- **Operating System**: Windows 10/11
+- **GPU**: NVidia GTX1650 4GB VRAM - No support yet for AMD or Intel GPUs
+- **RAM**: 16GB
+- **Storage**: 8GB HDD
+
+Note: The minimum specifications are what I've tested on. Performance depends on game resolution, system specifications and count of events in a gameplay video.
+
+---
+
+#### **GUI**
+
+- The tool provides a simple graphical user interface found in "src/niceshot_ai/NiceShot AI.exe".
+
+---
+
+<p align="center">
+  Download automated installation
+</p>
+
+<p align="center">
+  <a href="https://niceshot-ai.itch.io/niceshot-ai">
+    <img src="https://img.shields.io/badge/Download%20Tool-itch.io-FA5C5C?style=for-the-badge&logo=itchdotio&logoColor=white" alt="Download Tool">
+  </a>
+</p>
