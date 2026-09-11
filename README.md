@@ -5,12 +5,11 @@ NiceShot AI is a Python tool powered by computer vision to analyze gameplay vide
 Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 
 <p align="center">
-  Download automated installation
 </p>
 
 <p align="center">
   <a href="https://niceshot-ai.itch.io/niceshot-ai">
-    <img src="https://img.shields.io/badge/Download%20Tool-itch.io-FA5C5C?style=for-the-badge&logo=itchdotio&logoColor=white" alt="Download Tool">
+    <img src="https://img.shields.io/badge/Download%20Tool-itch.io-FA5C5C?style=for-the-badge&logo=itchdotio&logoColor=yellow" alt="Download Tool">
   </a>
 </p>
 ---
@@ -169,13 +168,3 @@ Note: The minimum specifications are what I've tested on. Performance depends on
 - The tool provides a simple graphical user interface found in "src/niceshot_ai/NiceShot AI.exe".
 
 ---
-
-<p align="center">
-  Download automated installation
-</p>
-
-<p align="center">
-  <a href="https://niceshot-ai.itch.io/niceshot-ai">
-    <img src="https://img.shields.io/badge/Download%20Tool-itch.io-FA5C5C?style=for-the-badge&logo=itchdotio&logoColor=white" alt="Download Tool">
-  </a>
-</p>
