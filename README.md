@@ -19,7 +19,7 @@ Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 
 ### **Supported Games**
 
-- **Call of Duty: Black Ops 7 (2025) --> Still in testing**
+- **Call of Duty: Black Ops 7 (2025)**
 
 | Key events |                        Description                            |          Limitations        |
 |------------|---------------------------------------------------------------|-----------------------------
