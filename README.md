@@ -155,7 +155,7 @@ This is run only to confirm an event after it's detected. Not through the whole 
 
 ---
 
-#### **Minimum System Requirements**
+### **Minimum System Requirements**
 
 - **Operating System**: Windows 10/11
 - **GPU**: NVidia GTX1650 4GB VRAM - No support yet for AMD or Intel GPUs
@@ -166,7 +166,7 @@ Note: The minimum specifications are what I've tested on. Performance depends on
 
 ---
 
-#### **GUI**
+### **GUI**
 
 - The tool provides a simple graphical user interface found in "src/niceshot_ai/NiceShot AI.exe".
 
