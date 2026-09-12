@@ -4,7 +4,7 @@ NiceShot AI is a Python tool powered by computer vision to analyze gameplay vide
 
 Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 
-
+<br>
 
 <p align="center">
 </p>
@@ -15,7 +15,7 @@ Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
   </a>
 </p>
 
-
+<br>
 
 ### **Supported Games**
 
