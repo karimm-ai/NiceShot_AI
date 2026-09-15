@@ -1,3 +1,5 @@
+from prompts import *
+
 from deep_sort_realtime.deepsort_tracker import DeepSort
 from trackers import DeathTracker, MedalTracker
 
@@ -9,7 +11,9 @@ cod_bo6_config = {
              'cls_label': 0,
              'conf_thres': 0.6,
              'confirm_event': True,
-             'clip_eligible': True},
+             'clip_eligible': True,
+             'context': {'weapon': ((1506, 866), (1566, 890)), 'location': ((906, 86), (1010, 108))}
+             },
 
     "Medal": {'tracker': DeepSort(max_age=30, nms_max_overlap=0.01),
               'cls_label': 1,
@@ -21,7 +25,9 @@ cod_bo6_config = {
               'tracker': DeathTracker(max_age=18),
               'cls_label': 2,
               'conf_thres': 0.75,
-              'clip_eligible': True}
+              'clip_eligible': True,
+              'vlm_prompt': cod_death_analysis_prompt
+              }
 }
 
 
@@ -32,7 +38,9 @@ cod_bo7_config = {
              'cls_label': 0,
              'conf_thres': 0.46,
              'confirm_event': True,
-             'clip_eligible': True},
+             'clip_eligible': True,
+             'context': {'weapon': ((1506, 866), (1566, 890)), 'location': ((906, 86), (1010, 108))}
+             },
 
     "Medal": {'tracker': MedalTracker(),
               'cls_label': 1,
@@ -44,5 +52,7 @@ cod_bo7_config = {
               'tracker': DeathTracker(max_age=18),
               'cls_label': 2,
               'conf_thres': 0.8,
-              'clip_eligible': True}
+              'clip_eligible': True,
+              'vlm_prompt': cod_death_analysis_prompt
+              }
 }
