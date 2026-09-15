@@ -1,5 +1,6 @@
 import easyocr
 import numpy as np
+import cv2
 
 
 class EventConfirm:
@@ -42,3 +43,39 @@ class EventConfirm:
 
         result = np.vstack((top_part, bottom_part))
         return result
+
+
+    def crop_frame2(self, frame: np.ndarray, top_left: tuple, bottom_right: tuple) -> np.ndarray:
+        x1, y1 = top_left
+        x2, y2 = bottom_right
+
+        roi = frame[y1:y2, x1:x2]
+
+        return roi
+
+
+    def read_text(self, frame: np.ndarray) -> str:
+        results = self.ocr.readtext(frame)
+        context = ""
+
+        for detection in results:
+            _, text, _ = detection
+            context+=text
+            #print(f"Text: {text.upper()}, Confidence: {confidence:.2f}")
+
+        return context
+
+
+    def pre_process_frame(self, frame: np.ndarray, scale:int = 5) -> np.ndarray:
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray = cv2.resize(
+            gray,
+            None,
+            fx=scale,
+            fy=scale,
+            interpolation=cv2.INTER_CUBIC
+        )
+
+        #gray = cv2.equalizeHist(gray)
+
+        return gray
