@@ -65,6 +65,7 @@ Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 ![Report Screenshot](sample_report.png)
 
 - **Lightweight Coaching**: Analyzes as much short negative clips (ex.Deaths) as needed, understanding what happened and providing coaching and better play suggestions for each single clip. Outputs to "coaching.jsonl" file.
+
 |Type|% of negative clips analyzed|
 |-------|------------------------|
 |'basic'|25%|
