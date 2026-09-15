@@ -16,7 +16,7 @@ import os, threading, time
 import json
 import numpy
 import logging
-
+import random
 
 
 class EventDetector:
@@ -37,7 +37,8 @@ class EventDetector:
                  max_videos: int = 1,
                  vertical_format: bool = False,
                  advanced_detection: bool = True,
-                 session_analysis = False
+                 session_analysis: bool = False,
+                 coaching: str | None = None
                  ):
         
         if game_name.lower()  == "call of duty: black ops 6":
@@ -60,6 +61,8 @@ class EventDetector:
                 from charts_config import cod_bo7_chart_config
                 self.report_config = cod_bo7_chart_config
 
+        if advanced_detection:
+            self.last_known_context = None
 
         self.output_dir = output_dir
         self.video_path = [video_path]
@@ -74,6 +77,7 @@ class EventDetector:
         self.filename = f"{self.output_dir}/events_temp.json"
         self.montage_length_sec = montage_length_sec
         self.vertical_format = vertical_format
+        self.coaching = coaching
 
         self.ffmpeg_path = resource_path("src/niceshot_ai/ffmpeg.exe")
         print(f"FFMPEG PATH: {self.ffmpeg_path}")
@@ -161,6 +165,66 @@ class EventDetector:
                     func(self.report_config["color_pallete"], chart["width"], chart["height"])
                 report.save_report(video_index)
 
+            if self.coaching is not None:
+                del model, self.event_confirm
+                coaching_events = []
+                for key, val in self.events_config.items():
+                    if val.get('vlm_prompt'):
+                        coaching_events.append(key)
+
+                from coach import Coach
+                ai_coach = Coach(self.output_dir, self.coaching)
+
+                if not self.save_clips:
+                    self.clip_queue = Queue()
+                    self.clipper = Clipper(self.ffmpeg_path, self.vertical_format)
+                    self.total_clips_extracted = 0
+
+                    events_file = "events_temp_3.json"
+                    all_events = {}
+                    with open(f"{self.output_dir}/events_temp_2.json", 'r') as f:
+                        events = json.load(f)
+
+                    for event in events:
+                        if event['type'] in coaching_events:
+                            if event['type'] not in all_events.keys():
+                                all_events[event['type']] = []
+                                all_events[event['type']].append(event)
+
+                            else:
+                                all_events[event['type']].append(event)
+
+                    for key, val in all_events.items():
+                        k = max(1, int(len(val) * ai_coach.sample_size))
+                        sample = random.sample(val, k=k)
+
+                        with open(f"{self.output_dir}/{events_file}", 'w') as f:
+                            json.dump(sample, f, indent=2)
+
+                        self._process_clips(events_file)
+                        ai_coach.sample_size = 1
+                
+                for key, val in self.events_config.items():
+                    if val.get('vlm_prompt'):
+                        messages = [
+                            {
+                                "role": "user",
+                                "content": [
+                                    {
+                                        "type": "video",
+                                        "video": f"{self.output_dir}/sampled_clip.mp4",
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": val.get('vlm_prompt')
+                                    }
+                                ]
+                            }
+                        ]
+                        ai_coach.analyze_session(messages, f"{self.output_dir}/{key}")
+
+                del ai_coach
+
         
     def _update_progress(self, frame_idx: int, pbar, progress_bar = None):
         pbar.update(1)
@@ -215,6 +279,23 @@ class EventDetector:
 
                     detections = self._collect_detections(model, frame)
 
+                    if any(detections.values()) and hasattr(self, "event_confirm") and self.last_known_context is None:
+                        for key, _ in detections.items():
+                            context = self.events_config[key].get("context")
+
+                            if context:
+                                self.last_known_context = {}
+                                x = 0
+                                for key_, val_ in context.items():
+                                    x+=1
+                                    roi = self.event_confirm.crop_frame2(frame, val_[0], val_[1])
+                                    roi = self.event_confirm.pre_process_frame(roi)
+
+                                    #cv2.imwrite(f"{self.output_dir}/output{x}.png", roi)
+
+                                    data = self.event_confirm.read_text(roi)
+                                    self.last_known_context[key_] = data
+
                     tracks = self._update_trackers(trackers, detections, frame)
                     self._handle_tracks(
                         tracks,
@@ -227,12 +308,12 @@ class EventDetector:
                 self._update_progress(frame_idx, pbar, progress_bar)
                 frame_idx += 1
 
-        self._finalize_video_events(video_index, clip_frames)#################################################
+        self._finalize_video_events(video_index, clip_frames)
         logging.info(f"Finalizing video {video_index}")
         self.cap.release()
 
         if "Kill" in self.events_config.keys():
-            self.kills_proc = KillEventsProcessor(self.model_path, self.output_dir)
+            self.kills_proc = KillEventsProcessor(self.output_dir)
             self.kills_proc.concat_kill_streaks(video_index)
 
         if self.add_to_csv:
@@ -240,7 +321,7 @@ class EventDetector:
             self.events_csv.clear()
 
         if self.save_clips:
-            self._process_clips()
+            self._process_clips("events_temp_2.json")
         
         if self.save_clips and (self.create_montage and self.montage_length_sec > 0):
             self._create_montage()
@@ -258,7 +339,11 @@ class EventDetector:
 
         self.DURATION_TO_BE_ANALYZED = max_hours*60
 
+        self.video_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.video_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
         print(f"Total Frames {total_frames}\nFPS {self.fps}\nVideo Duration {duration_hours}\nTotal Frames to be analyzed {self.TOTAL_FRAMES_TO_BE_ANALYZED}")
+        print(f"Video Resolution {self.video_width}x{self.video_height}")
 
         logging.info(f"Total Frames {total_frames}\nFPS {self.fps}\nVideo Duration {duration_hours}\nTotal Frames to be analyzed {self.TOTAL_FRAMES_TO_BE_ANALYZED}")
 
@@ -378,9 +463,9 @@ class EventDetector:
             self.events.clear()
 
 
-    def _process_clips(self):
+    def _process_clips(self, meta_file: str):
          self.clip_progress = self.percentages.copy()
-         with open(f"{self.output_dir}/events_temp_2.json", 'r') as f:
+         with open(f"{self.output_dir}/{meta_file}", 'r') as f:
             events = json.load(f)
             clip_events = []
             for event in events:
@@ -456,7 +541,13 @@ class EventDetector:
         if not event_times:
             return
         starting_time, ending_time = self.find_event_times(event_times, event_type)
-        event = Event(event_type, starting_time, ending_time, video_num)
+        if self.last_known_context is not None:
+            event = Event(event_type, starting_time, ending_time, video_num, **self.last_known_context)
+            self.last_known_context = None
+
+        else:
+            event = Event(event_type, starting_time, ending_time, video_num)
+
         self.events.append(event)
         
         if self.add_to_csv:
