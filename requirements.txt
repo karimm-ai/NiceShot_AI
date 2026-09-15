@@ -6,7 +6,11 @@ selenium==4.38.0
 tqdm==4.66.5
 ultralytics==8.3.55
 yt_dlp==2025.10.22
-onnxruntime
-easyocr
+onnxruntime==1.23.2
+easyocr==1.7.2
 #discord
 #scikit-learn
+git+https://github.com/huggingface/transformers
+accelerate==1.14.0
+bitsandbytes==0.50.0
+qwen-vl-utils==0.0.14
