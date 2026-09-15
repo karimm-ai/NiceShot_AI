@@ -9,8 +9,7 @@ from bisect import bisect_left, bisect_right
 class KillEventsProcessor:
     """Finds top kill clips and kill streaks"""
 
-    def __init__(self, model_path: str, output_dir: str):
-        self.model_path = model_path
+    def __init__(self, output_dir: str):
         self.output_dir = output_dir
 
 
