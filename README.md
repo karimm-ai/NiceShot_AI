@@ -54,10 +54,10 @@ Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 
 ### **Models Description**
 
-**Event Detector**: YOLOv8n & YOLO11n by [Ultralytics](https://github.com/ultralytics/ultralytics)
+- **Event Detector**: YOLOv8n & YOLO11n by [Ultralytics](https://github.com/ultralytics/ultralytics)
 . Fine-tuned on a custom-collected & annotated dataset of gameplay videos under a CC license.
 
-**Event Scene Understanding & Coaching**: Qwen2.5-VL-3B-Instruct by [Qwen](https://github.com/QwenLM-corp/Qwen2.5-VL)
+- **Event Scene Understanding & Coaching**: Qwen2.5-VL-3B-Instruct by [Qwen](https://github.com/QwenLM-corp/Qwen2.5-VL)
 . Used as the vision-language model (VLM) for analyzing short gameplay clips and generating coaching insights based on detected events and visual context.
 
 ---
