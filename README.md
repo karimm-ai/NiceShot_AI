@@ -1,4 +1,4 @@
-## **NiceShot_AI: The analytics layer games do not add**
+## **NiceShot AI: The analytics layer games do not add**
 - #### Lightweight tool
 - #### Runs locally
 - #### No cloud queues
