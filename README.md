@@ -44,9 +44,13 @@ Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 
 ---
 
-### **Model Description**
+### **Models Description**
 
-YOLOv8n & YOLO11n by [Ultralytics](https://github.com/ultralytics/ultralytics). Fine-tuned on custom collected & annotated dataset of gameplay videos under CC license.
+**Event Detector**: YOLOv8n & YOLO11n by [Ultralytics](https://github.com/ultralytics/ultralytics)
+. Fine-tuned on a custom-collected & annotated dataset of gameplay videos under a CC license.
+
+**Event Scene Understanding & Coaching**: Qwen2.5-VL-3B-Instruct by [Qwen](https://github.com/QwenLM-corp/Qwen2.5-VL)
+. Used as the vision-language model (VLM) for analyzing short gameplay clips and generating coaching insights based on detected events and visual context.
 
 ---
 
@@ -60,7 +64,13 @@ YOLOv8n & YOLO11n by [Ultralytics](https://github.com/ultralytics/ultralytics). 
 
 ![Report Screenshot](sample_report.png)
 
-- **Lightweight Coaching**: Analyzes as much short negative clips (ex.Deaths), understanding what happened and providing coaching and better play suggestions.
+- **Lightweight Coaching**: Analyzes as much short negative clips (ex.Deaths) as needed, understanding what happened and providing coaching and better play suggestions for each single clip. Outputs to "coaching.jsonl" file.
+|Type|% of negative clips analyzed|
+|-------|------------------------|
+|'basic'|25%|
+|'short|50%|
+|'long'|75%|
+|'very long'| 100%|
 
 ---
 
