@@ -18,7 +18,8 @@ def main():
     parser.add_argument("--session_analysis", action="store_true")
     parser.add_argument("--compilation", action="store_true")
     parser.add_argument("--comp_len", type=int, default=0)
- 
+    parser.add_argument("--coaching", default="None")
+
     args = parser.parse_args()
 
     try:
@@ -39,7 +40,8 @@ def main():
             max_videos=1,
             vertical_format=args.vertical_format,
             advanced_detection=True,
-            session_analysis=args.session_analysis
+            session_analysis=args.session_analysis,
+            coaching=args.coaching
         )
 
         detector.detect_events()

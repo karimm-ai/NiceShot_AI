@@ -11,7 +11,7 @@ class GUI:
     def __init__(self, root):
         self.root = root
         self.root.title("NiceShot AI")
-        self.root.geometry("500x450")
+        self.root.geometry("500x500")
         self.root.configure(bg="#dcb561")
         icon_path = Path(sys.executable).resolve().parent / "icon.ico"
         self.root.iconbitmap(icon_path)
@@ -27,13 +27,14 @@ class GUI:
         )
 
         games = ["Call of Duty: Black Ops 6", "Call of Duty: Black Ops 7"]
+        coaching_type = ["None", "Basic", "Short", "Long", "Very Long"]
 
         game_frame = tk.Frame(root, bg="#dcb561")
         game_frame.pack(fill="x", padx=20, anchor="w", pady=20)
         tk.Label(game_frame, text="Game:", bg="#dcb561", font=bold_font, fg="black").pack(side="left", padx=(0,10))
-        self.combo = ttk.Combobox(game_frame, values=games, state="readonly", width=40, style="Custom.TCombobox")
-        self.combo.current(0)
-        self.combo.pack(side="left")
+        self.combo1 = ttk.Combobox(game_frame, values=games, state="readonly", width=40, style="Custom.TCombobox")
+        self.combo1.current(0)
+        self.combo1.pack(side="left")
         
         tk.Label(root, text="Input Video:", bg="#dcb561", font=bold_font, fg="black").pack(anchor="w", padx=20, pady=(10,0))
         input_frame = tk.Frame(root, bg="#dcb561")
@@ -53,7 +54,7 @@ class GUI:
         self.save_clips = tk.BooleanVar()
         self.create_compilation = tk.BooleanVar()
         self.vertical_format = tk.BooleanVar()
-        #self.analysis = tk.BooleanVar()
+        self.analysis = tk.BooleanVar()
         bg_color = "#dcb561"   # deep violet
         fg_color = "black"
 
@@ -79,15 +80,22 @@ class GUI:
         cb1 = tk.Checkbutton(frame, text="Save Clips", variable=self.save_clips, **cb_options, font=bold_font)
         cb2 = tk.Checkbutton(frame, text="Create Compilation", variable=self.create_compilation, **cb_options, font=bold_font)
         cb3 = tk.Checkbutton(frame, text="Save clips in vertical format", variable=self.vertical_format, **cb_options, font=bold_font)
-        #cb4 = tk.Checkbutton(frame, text="Create Session Analysis Report", variable=self.analysis, **cb_options, font=bold_font)
+        cb4 = tk.Checkbutton(frame, text="Create Session Analysis Report", variable=self.analysis, **cb_options, font=bold_font)
+
+        coaching_frame = tk.Frame(root, bg="#dcb561")
+        coaching_frame.pack(fill="x", padx=20, anchor="w", pady=5)
+        tk.Label(coaching_frame, text="Coaching:", bg="#dcb561", font=bold_font, fg="black").pack(side="left", padx=(0,10))
+        self.combo2 = ttk.Combobox(coaching_frame, values=coaching_type, state="readonly", width=15, style="Custom.TCombobox")
+        self.combo2.current(0)
+        self.combo2.pack(side="left")
 
         cb1.grid(row=0, column=0, padx=0, pady=3, sticky="w")
         cb2.grid(row=0, column=1, padx=0, pady=3, sticky="w")
         cb3.grid(row=1, column=0, padx=0, pady=3, sticky="w")
-        #cb4.grid(row=1, column=1, padx=0, pady=3, sticky="w")
+        cb4.grid(row=1, column=1, padx=0, pady=3, sticky="w")
 
         comp_frame = tk.Frame(root, bg="#dcb561")
-        comp_frame.pack(fill="x", padx=20, anchor="w")
+        comp_frame.pack(fill="x", padx=20, anchor="w", pady=0)
         tk.Label(comp_frame, text="Length of compilation (minutes):", bg="#dcb561", font=bold_font, fg="black").pack(side="left", padx=(0,10))
 
         def validate(value):
@@ -100,11 +108,11 @@ class GUI:
             validate="key",
             validatecommand=vcmd,
         )
-        self.spin.pack(anchor="w", padx=20, pady=25)
+        self.spin.pack(anchor="w", padx=20, pady=10)
 
         # --- Analyze Button ---
-        self.analyze_btn = tk.Button(root, text="Analyze gameplay", command=self.analyze_video, bg="#dcb561", fg="black", font=bold_font)
-        self.analyze_btn.pack(pady=10)
+        self.analyze_btn = tk.Button(root, text="Start gameplay analysis", command=self.analyze_video, bg="#dcb561", fg="black", font=bold_font)
+        self.analyze_btn.pack(pady=30)
         # --- Progress Bar ---
         progress_bar_style = ttk.Style()
         progress_bar_style.theme_use('default')
@@ -185,8 +193,8 @@ class GUI:
             )
             self.analyze_btn.config(state="normal")
             
-            temp_files = ("status.json", "progress.json", "events_temp.json", "events_temp_2.json", "video1.csv", "timestamp_sorted.csv")
-            for file in temp_files:
+            meta_files = ("status.json", "progress.json", "events_temp.json", "events_temp_2.json", "video1.csv", "timestamp_sorted.csv", "events_temp_3.json")
+            for file in meta_files:
                 try:
                     os.remove(f"{self.output_entry.get()}/{file}")
                 except:
@@ -199,11 +207,12 @@ class GUI:
         save_clips = self.save_clips.get()
         create_compilation = self.create_compilation.get()
         vert = self.vertical_format.get()
-        #analysis = self.analysis.get()
-        choosen_game = self.combo.get()
+        analysis = self.analysis.get()
+        chosen_game = self.combo1.get()
         montage_len_seconds = int(self.spin.get())*60
+        coaching_type = self.combo2.get().lower()
 
-        print(save_clips, create_compilation, vert, choosen_game, montage_len_seconds)#analysis, 
+        print(save_clips, create_compilation, vert, chosen_game, montage_len_seconds, analysis) 
         
         if not input_path or not os.path.isfile(input_path):
             messagebox.showerror("Error", "Please select a valid input video!")
@@ -231,28 +240,30 @@ class GUI:
 
         python_file = root_dir / ".venv" / "Scripts" / "python.exe"
         cli_file = base_dir / "niceshot_ai.py"
-        #messagebox.showinfo("HI", f"{python_file}, {cli_file}")
 
         args = [
             python_file,
             cli_file,
-            "--game", choosen_game,
+            "--game", chosen_game,
             "--input", input_path,
             "--output", output_path,
-            "--comp_len", str(montage_len_seconds)
+            "--comp_len", str(montage_len_seconds),
         ]
 
         if vert:
             args.append("--vertical_format")
 
-        # if analysis:
-        #     args.append("--session_analysis")
+        if analysis:
+            args.append("--session_analysis")
 
         if save_clips:
             args.append("--save_clips")
 
         if create_compilation:
             args.append("--compilation")
+
+        if coaching_type != "none":
+            args.extend(["--coaching", coaching_type])
 
         self.process = subprocess.Popen(args, creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0)
 
