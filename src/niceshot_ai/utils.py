@@ -2,20 +2,26 @@ import json, subprocess, os, csv, sys, shutil
 from pathlib import Path
 
 
+import cv2
+
+
 def get_duration(clip_path: str) -> float:
-    """Returns the duration of a video using ffprobe"""
+    """Returns the duration of a video using OpenCV."""
 
-    cmd = [
-        "ffprobe",
-        "-v", "error",
-        "-show_entries", "format=duration",
-        "-of", "json",
-        clip_path
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    info = json.loads(result.stdout)
+    cap = cv2.VideoCapture(clip_path)
 
-    return float(info['format']['duration'])
+    if not cap.isOpened():
+        raise ValueError(f"Could not open video: {clip_path}")
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+
+    cap.release()
+
+    if fps <= 0:
+        raise ValueError(f"Could not determine FPS for video: {clip_path}")
+
+    return frame_count / fps
 
 
 def add_to_csv_(output_dir: str, filename: str, events: list):
@@ -68,7 +74,7 @@ def move_clips_to_folder(clips_paths: list, montage_length: int, output_dir: str
         if not len(clips_paths) > 0:
             break
         
-        vid_path = clips_paths.pop(0)#[0]
+        vid_path = clips_paths.pop(0)
         vid_path = list(root_dir.rglob(vid_path))[0]
         print(vid_path)
 
