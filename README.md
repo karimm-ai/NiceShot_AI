@@ -3,6 +3,7 @@
 - #### Runs locally
 - #### No cloud queues
 - #### No sign ups 
+- #### Unlimited hours of gameplay analysis
 - #### Your gameplay footage stays private 
 - #### One click install
 
@@ -94,7 +95,7 @@ Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 
 ---
 
-### **Limitations**
+### **Known Limitations**
 
 - **Event detection is not perfect**: From my testing, an event can get detected more than once or not detected at all.
 
@@ -102,10 +103,10 @@ Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 
 ### **Installation**
 
-To get started with **NiceShot_AI**, clone the repository first.
+To get started with **NiceShot_AI**, clone the repository first and install Python version **3.10.11**.
 
-#### **Second: Install the Dependencies**
-Create a Python virtual environment (optional, but recommended). My Python version is 3.10.11
+#### **Second: Installing the Dependencies**
+Create a Python virtual environment (optional, but recommended).
 
 ```bash
 python -m venv venv
@@ -186,7 +187,7 @@ This is run only to:
 - **Operating System**: Windows 10/11
 - **GPU**: NVidia GTX1650 4GB VRAM - No support yet for AMD or Intel GPUs
 - **RAM**: 16GB
-- **Storage**: 8GB HDD
+- **Storage**: 15GB HDD
 
 Note: The minimum specifications are what I've tested on. Performance depends on game resolution, system specifications and count of events in a gameplay video.
 
