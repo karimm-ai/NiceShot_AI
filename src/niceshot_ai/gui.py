@@ -222,7 +222,7 @@ class GUI:
             messagebox.showerror("Error", "Please select a valid output folder!")
             self.analyze_btn.config(state="normal")
             return 
-        if not save_clips and not create_compilation:# and not analysis:
+        if not save_clips and not create_compilation and not analysis and coaching_type == "none":
             messagebox.showerror("Error", "Please tick a relevant checkbox!")
             self.analyze_btn.config(state="normal")
             return
