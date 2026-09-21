@@ -8,9 +8,7 @@ ultralytics==8.3.55
 yt_dlp==2025.10.22
 onnxruntime==1.23.2
 easyocr==1.7.2
-#discord
-#scikit-learn
-git+https://github.com/huggingface/transformers
+transformers==5.15.0
 accelerate==1.14.0
 bitsandbytes==0.50.0
 qwen-vl-utils==0.0.14
