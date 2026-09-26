@@ -1,15 +1,15 @@
 ## **NiceShot AI: The analytics layer games do not add**
-- #### Lightweight tool
-- #### Runs locally
-- #### No cloud queues
-- #### No sign ups 
-- #### Unlimited hours of gameplay analysis
-- #### Your gameplay footage stays private 
-- #### One click install
+- **Lightweight tool**
+- **Runs locally**
+- **No cloud queues**
+- **No sign ups**
+- **Unlimited hours of gameplay analysis**
+- **Your gameplay footage stays private**
+- **One click install**
 
 ---
 
-NiceShot AI is a Python tool powered by computer vision to analyze gameplay videos. With the integration of cutting-edge tools like YOLO, OpenCV, FFmpeg, and matplotlib, NiceShot AI is designed to automatically detect, track and clip key gameplay events, create visual report for session stats as well as analyzes negative events (ex.Deaths) providing lightweight scene understanding & coaching to the player.
+NiceShot AI is a Python tool powered by computer vision to analyze gameplay videos. With the integration of cutting-edge tools like YOLO, OpenCV, FFmpeg, matplotlib, and VLM, NiceShot AI is designed to automatically detect, track and clip key gameplay events, create visual report for session stats as well as analyzes negative events (ex.Deaths) providing lightweight scene understanding & coaching to the player.
 
 Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 
@@ -197,5 +197,9 @@ Note: The minimum specifications are what I've tested on. Performance depends on
 (Coaching is still not a part of the GUI)
 
 - The tool provides a simple graphical user interface found in "src/niceshot_ai/NiceShot AI.exe".
+
+---
+
+**For custom development & consultation contact me at: niceshot.ai@gmail.com**
 
 ---
