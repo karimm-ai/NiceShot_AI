@@ -5,7 +5,7 @@ opencv_python_headless==4.10.0.84
 selenium==4.38.0
 tqdm==4.66.5
 ultralytics==8.3.55
-yt_dlp==2025.10.22
+yt_dlp==2026.8.19
 onnxruntime==1.23.2
 easyocr==1.7.2
 transformers==5.15.0
