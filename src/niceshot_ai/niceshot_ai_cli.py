@@ -1,7 +1,7 @@
 import argparse
 import sys
 import json
-from niceshot_ai.niceshot_ai import NiceShot_AI
+from niceshot_ai_main import NiceShot_AI 
 
 def main():
     parser = argparse.ArgumentParser(description="NiceShot AI CLI")
