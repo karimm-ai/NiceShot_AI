@@ -1,4 +1,3 @@
-from twitch_handler import TwitchHandler
 from video_clipper import Clipper
 from kill_events_process import KillEventsProcessor
 from event_types import Event
@@ -42,23 +41,23 @@ class EventDetector:
                  ):
         
         if game_name.lower()  == "call of duty: black ops 6":
-            from events_config import cod_bo6_config
+            from niceshot_ai.configs.events_config import cod_bo6_config
             self.events_config = cod_bo6_config
             self.conf_thresholds = {cls: val["conf_thres"] for cls, val in enumerate(self.events_config.values())}
             self.model_path = resource_path("game_models/yolov8n-cod_bo6.pt")
         
             if session_analysis:
-                from charts_config import cod_bo6_chart_config
+                from niceshot_ai.configs.charts_config import cod_bo6_chart_config
                 self.report_config = cod_bo6_chart_config
 
         elif game_name.lower() == "call of duty: black ops 7":
-            from events_config import cod_bo7_config
+            from niceshot_ai.configs.events_config import cod_bo7_config
             self.events_config = cod_bo7_config
             self.conf_thresholds = {cls: val["conf_thres"] for cls, val in enumerate(self.events_config.values())}
             self.model_path = resource_path("game_models/yolov11n-cod_bo7.pt")
 
             if session_analysis:
-                from charts_config import cod_bo7_chart_config
+                from niceshot_ai.configs.charts_config import cod_bo7_chart_config
                 self.report_config = cod_bo7_chart_config
 
         if advanced_detection:
@@ -84,16 +83,6 @@ class EventDetector:
 
         if advanced_detection:
             self.event_confirm = EventConfirm()
-
-        if 'twitch' in self.video_path[0]:
-            twitch_handler = TwitchHandler(self.video_path[0], max_videos, self.output_dir)
-            vods = twitch_handler.get_all_videos(game_name)
-            with open ('vods.txt', 'w') as file:
-                for vod in vods:
-                    file.write(f"{vod}\n")
-            
-            twitch_handler.download_channel_videos(vods)
-            self.video_path = [f"{self.output_dir}/Downloads/{file}" for file in os.listdir(f"{self.output_dir}/Downloads")]
             
         if self.save_clips:
             self.clip_queue = Queue()
@@ -166,14 +155,23 @@ class EventDetector:
                 report.save_report(video_index)
 
             if self.coaching is not None:
-                del model, self.event_confirm
+                del model
+                if hasattr(self, "event_confirm"):
+                    del self.event_confirm
+
+                import gc, torch
+                gc.collect()
+                torch.cuda.empty_cache()
+                torch.cuda.ipc_collect()
+                torch.cuda.synchronize()
+
                 coaching_events = []
                 for key, val in self.events_config.items():
                     if val.get('vlm_prompt'):
                         coaching_events.append(key)
 
-                from coach import Coach
-                ai_coach = Coach(self.output_dir, self.coaching)
+                from observer import Observer
+                observer = Observer(self.output_dir, self.coaching)
 
                 if not self.save_clips:
                     self.clip_queue = Queue()
@@ -195,33 +193,28 @@ class EventDetector:
                                 all_events[event['type']].append(event)
 
                     for key, val in all_events.items():
-                        k = max(1, int(len(val) * ai_coach.sample_size))
+                        k = max(1, int(len(val) * observer.sample_size))
                         sample = random.sample(val, k=k)
 
                         with open(f"{self.output_dir}/{events_file}", 'w') as f:
                             json.dump(sample, f, indent=2)
 
                         self._process_clips(events_file)
-                        ai_coach.sample_size = 1
+                        observer.sample_size = 1
                 
                 for key, val in self.events_config.items():
                     if val.get('vlm_prompt'):
-                        messages = [
-                            {
-                                "role": "user",
-                                "content": [
-                                    {
-                                        "type": "video",
-                                        "video": f"{self.output_dir}/sampled_clip.mp4",
-                                    },
-                                    {
-                                        "type": "text",
-                                        "text": val.get('vlm_prompt')
-                                    }
-                                ]
-                            }
-                        ]
-                        ai_coach.analyze_session(messages, f"{self.output_dir}/{key}")
+                        observer.analyze_session(val.get('vlm_prompt'), f"{self.output_dir}/{key}")
+
+                del observer
+
+                from coach import Coach
+                ai_coach = Coach(self.output_dir)
+                for _, val in self.events_config.items():
+                    if val.get('llm_prompt'):
+                        results = ai_coach.analyze_session(f"{self.output_dir}/{val}.jsonl", val.get('llm_prompt'))
+                        with open(f"{self.output_dir}/{val}_coaching.jsonl", 'w') as f:
+                            json.dump(results, f, indent=2)
 
                 del ai_coach
 
