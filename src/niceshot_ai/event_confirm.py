@@ -10,12 +10,8 @@ class EventConfirm:
 
 
     def extract_text(self, frame: np.ndarray) -> str:
-        texts = []
-
         detected_text_regions = self.ocr.detect(frame)[0]
-        for box in detected_text_regions:
-            text = self.ocr.recognize(frame, box, [], detail=0)
-            texts.extend(text)
+        texts = self.ocr.recognize(frame, detected_text_regions[0], [], detail=0, batch_size=16)
         return ''.join(texts)
 
 
