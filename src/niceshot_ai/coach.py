@@ -1,164 +1,94 @@
-import cv2
-from qwen_vl_utils import process_vision_info
-import os, json
-import random
+import torch
+from transformers import (AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, AutoConfig)
+import json
 
 
 class Coach:
-    def __init__(self, output_dir: str, type: str | None = None):
-        self.model, self.processor = self.load_model()
+    def __init__(self, output_dir: str):
         self.output_dir = output_dir
-        self.type = type
-        self.sample_size = self.specify_sample()
-        
+        self.model, self.tokenizer = self.load_model()
+
+
     def load_model(self):
-        import torch
-        from transformers import (
-            Qwen2_5_VLForConditionalGeneration,
-            AutoProcessor,
-            BitsAndBytesConfig)
+        MODEL_ID = "microsoft/Phi-3-mini-4k-instruct"
 
-        bnb = BitsAndBytesConfig(
+        quant_config = BitsAndBytesConfig(
             load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.float16,
             bnb_4bit_quant_type="nf4",
-        )
+            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_use_double_quant=True)
 
-        model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-            "Qwen/Qwen2.5-VL-3B-Instruct",
+        tokenizer = AutoTokenizer.from_pretrained(
+            MODEL_ID,
+            trust_remote_code=True)
+
+        config = AutoConfig.from_pretrained(
+            MODEL_ID,
+            trust_remote_code=True)
+
+        model = AutoModelForCausalLM.from_pretrained(
+            MODEL_ID,
+            quantization_config=quant_config,
             device_map="auto",
-            quantization_config=bnb,
-        )
+            torch_dtype=torch.float16)
 
-        processor = AutoProcessor.from_pretrained(
-            "Qwen/Qwen2.5-VL-3B-Instruct"
-        )
+        return model, tokenizer
 
-        return model, processor
 
-    def infer(self, messages: list, model, processor):
-        text = processor.apply_chat_template(
+    def infer(self, messages):
+        inputs = self.tokenizer.apply_chat_template(
             messages,
-            tokenize=False,
             add_generation_prompt=True,
-        )
+            tokenize=True,
+            return_dict=True,
+            return_tensors="pt")
 
-        image_inputs, video_inputs = process_vision_info(messages)
+        inputs = {
+            key: value.to(self.model.device)
+            for key, value in inputs.items()}
 
-        inputs = processor(
-            text=[text],
-            images=image_inputs,
-            videos=video_inputs,
-            padding=True,
-            return_tensors="pt",
-        )
+        with torch.inference_mode():
+            outputs = self.model.generate(
+                **inputs,
+                max_new_tokens=512,
+                #temperature=0.2,
+                do_sample=False,)
+                #top_p=0.9)
 
-        inputs = inputs.to(model.device)
+        input_length = inputs["input_ids"].shape[1]
 
-        generated = model.generate(
-            **inputs,
-            max_new_tokens=80,
-        )
+        answer = self.tokenizer.decode(
+            outputs[0][input_length:],
+            skip_special_tokens=True)
 
-        response = processor.batch_decode(
-            generated[:, inputs.input_ids.shape[1]:],
-            skip_special_tokens=True,
-        )[0]
-
-        return response
+        return answer
 
 
-    def pre_process_gameplay(self, video_path: str, sample_every: int = 6):
-        output_video = f"{self.output_dir}/sampled_clip.mp4"
+    def analyze_session(self, observations_file_path, prompt):
+        suggestions = []
+        with open(observations_file_path, "r", encoding="utf-8") as f:
+            for line in f:
+                llm_prompt = prompt
+                record = json.loads(line)
+                clip = record["clip"]
+                msg = record["msg"]
 
-        target_width = 720
-        target_height = 540
+                llm_prompt += msg
+                print(llm_prompt)
+                messages = [
+                    {
+                        "role": "system",
+                        "content": "You are a helpful FPS gameplay analyst."
+                    },
+                    {
+                        "role": "user",
+                        "content": llm_prompt
+                    }
+                ]
 
-        cap = cv2.VideoCapture(video_path)
+                response = self.infer(messages)
 
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                suggestion = {'clip': clip, 'coaching': response}
+                suggestions.append(suggestion)
 
-        print(f"Original FPS: {fps}")
-        print(f"Original frames: {total_frames}")
-
-        output_fps = fps
-
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-
-        out = cv2.VideoWriter(
-            output_video,
-            fourcc,
-            output_fps,
-            (target_width, target_height)
-        )
-
-        frame_id = 0
-        written = 0
-
-        last_frame_to_analyze = total_frames - 110
-
-        while True:
-            ret, frame = cap.read()
-
-            if not ret or frame_id >= last_frame_to_analyze:
-                break
-
-            # Sample frames
-            if frame_id % sample_every == 0:
-                resized = cv2.resize(
-                    frame,
-                    (target_width, target_height),
-                    interpolation=cv2.INTER_AREA
-                )
-
-                out.write(resized)
-                written += 1
-
-            frame_id += 1
-
-
-        cap.release()
-        out.release()
-
-        print(f"Done. Written frames: {written}")
-        print(f"Saved: {output_video}")
-
-
-    def analyze_session(self, messages, folder):
-        output_file = f"{self.output_dir}/coaching.jsonl"
-        clips = []
-
-        for clip in os.listdir(folder):
-            clips.append(clip)
-
-        k = max(1, int(len(clips) * self.sample_size))
-        sample = random.sample(clips, k=k)
-
-        with open(output_file, "a", encoding="utf-8") as f:
-            for clip in sample:
-                self.pre_process_gameplay(f"{folder}/{clip}")
-                msg = self.infer(messages, self.model, self.processor)                
-                record = {
-                    "clip": clip,
-                    "msg": msg
-                }
-
-                f.write(json.dumps(record, ensure_ascii=False) + "\n")
-
-
-    def specify_sample(self):
-        if self.type == 'basic':
-            return 0.25
-
-        elif self.type == 'short':
-            return 0.5
-
-        elif self.type == 'long':
-            return 0.75
-
-        elif self.type == 'very long':
-            return 1
-        
-        else:
-            return 0
+        return suggestions
