@@ -1,19 +1,33 @@
-from utils import get_duration
+from utils import get_duration, move_clips_to_folder
 
 import os, subprocess
+from kill_events_process import KillEventsProcessor
 
 
 class Montage:
     """Compiles all clips within a folder into 1 clip with simple edit and converts a video from horizontal aspect to vertical"""
 
-    def __init__(self,):
-        pass
-   
+    def __init__(self, output_dir, montage_len, events_config, ffmpeg_path, vertical_format):
+        self.output_dir = output_dir
+        self.montage_length_sec = montage_len
+        self.events_config = events_config
+        self.ffmpeg_path = ffmpeg_path
+        self.vertical_format = vertical_format
 
-    def make_compilation(self, input_folder: str, output_file: str, fade_duration: float = 0.5):
+        
+    def make_compilation(
+        self,
+        input_folder: str,
+        output_file: str,
+        fade_duration: float = 0.5
+    ):
         print("🎬 Creating Montage...\n")
 
-        clips = sorted([f for f in os.listdir(input_folder) if f.endswith(".mp4")])
+        clips = sorted([
+            f for f in os.listdir(input_folder)
+            if f.lower().endswith(".mp4")
+        ])
+
         if not clips:
             print("❌ No clips found.")
             return
@@ -23,37 +37,67 @@ class Montage:
 
         for idx in range(0, len(clips), chunk_size):
             chunk = clips[idx:idx + chunk_size]
+
             print(f"⚙️ Processing chunk {idx // chunk_size + 1}...")
 
             input_args = []
             filter_parts = []
             pairs = ""
+            valid_count = 0
 
-            for i, clip in enumerate(chunk):
+            for clip in chunk:
                 path = os.path.join(input_folder, clip)
+
+                # Check clip before adding it to FFmpeg
+                if not self.is_mp4_valid(path):
+                    print(f"⚠️ Skipping corrupted/invalid clip: {clip}")
+                    continue
+
+                i = valid_count
+                valid_count += 1
+
                 duration = max(0.1, get_duration(path))
                 fade_out = max(0, duration - fade_duration)
 
                 input_args += ["-i", path]
 
                 filter_parts.append(
-                    f"[{i}:v]fade=t=in:st=0:d={fade_duration},fade=t=out:st={fade_out}:d={fade_duration}[v{i}]"
+                    f"[{i}:v]"
+                    f"fade=t=in:st=0:d={fade_duration},"
+                    f"fade=t=out:st={fade_out}:d={fade_duration}"
+                    f"[v{i}]"
                 )
+
                 filter_parts.append(
-                    f"[{i}:a]afade=t=in:st=0:d={fade_duration},afade=t=out:st={fade_out}:d={fade_duration}[a{i}]"
+                    f"[{i}:a]"
+                    f"afade=t=in:st=0:d={fade_duration},"
+                    f"afade=t=out:st={fade_out}:d={fade_duration}"
+                    f"[a{i}]"
                 )
 
                 pairs += f"[v{i}][a{i}]"
 
-            filter_parts.append(f"{pairs}concat=n={len(chunk)}:v=1:a=1[v][a]")
+            # Nothing valid in this chunk
+            if valid_count == 0:
+                print("⚠️ No valid clips in this chunk. Skipping...")
+                continue
+
+            # Concatenate only valid clips
+            filter_parts.append(
+                f"{pairs}concat=n={valid_count}:v=1:a=1[v][a]"
+            )
 
             filter_complex = ";".join(filter_parts)
 
-            temp_output = os.path.join(input_folder, f"_temp_{idx}.mp4")
+            temp_output = os.path.join(
+                input_folder,
+                f"_temp_{idx}.mp4"
+            )
+
             temp_outputs.append(temp_output)
 
             cmd = [
-                "ffmpeg",
+                self.ffmpeg_path,
                 *input_args,
                 "-filter_complex", filter_complex,
                 "-map", "[v]",
@@ -64,36 +108,75 @@ class Montage:
                 temp_output
             ]
 
-            subprocess.run(cmd, check=True)
+            result = subprocess.run(
+                cmd,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+
+            if result.returncode != 0:
+                print("\n========== FFMPEG ERROR ==========")
+                print(result.stderr)
+                print("==================================\n")
+
+                raise RuntimeError(
+                    f"FFmpeg failed with code {result.returncode}"
+                )
+
+        # No valid chunks were created
+        if not temp_outputs:
+            print("❌ No valid MP4 clips found.")
+            return
 
         # Merge
         print("🔗 Merging...")
 
         if len(temp_outputs) == 1:
-            # Only one chunk → just rename it to the final output
+            # Only one chunk → move it to final output
             os.replace(temp_outputs[0], output_file)
-            print(f"✅ Only one chunk, moved to final output: {output_file}")
+
+            print(
+                f"✅ Only one chunk, moved to final output: "
+                f"{output_file}"
+            )
+
         else:
             # Normal concat merge
             list_file = os.path.join(input_folder, "merge.txt")
-            with open(list_file, "w") as f:
+
+            with open(list_file, "w", encoding="utf-8") as f:
                 for t in temp_outputs:
                     abs_path = os.path.abspath(t).replace("\\", "/")
                     f.write(f"file '{abs_path}'\n")
 
-            subprocess.run([
-                "ffmpeg",
-                "-f", "concat",
-                "-safe", "0",
-                "-i", list_file,
-                "-c:v", "libx264",
-                "-crf", "23",
-                "-preset", "fast",
-                "-c:a", "aac",
-                "-b:a", "192k",
-                "-y",
-                output_file
-            ], check=True)
+            result = subprocess.run(
+                [
+                    self.ffmpeg_path,
+                    "-f", "concat",
+                    "-safe", "0",
+                    "-i", list_file,
+                    "-c:v", "libx264",
+                    "-crf", "23",
+                    "-preset", "fast",
+                    "-c:a", "aac",
+                    "-b:a", "192k",
+                    "-y",
+                    output_file
+                ],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+
+            if result.returncode != 0:
+                print("\n========== FFMPEG MERGE ERROR ==========")
+                print(result.stderr)
+                print("========================================\n")
+
+                raise RuntimeError(
+                    f"FFmpeg merge failed with code {result.returncode}"
+                )
 
         print(f"✅ Done: {output_file}")
 
@@ -109,7 +192,7 @@ class Montage:
 
         # FFmpeg command with crop and scale
         cmd = [
-            "ffmpeg",
+            self.ffmpeg_path,
             "-i", video_path,
             "-filter:v",
             f"crop={crop_width}:{crop_height}:{x_offset}:{y_offset},scale=1080:1920,setsar=1",
@@ -125,3 +208,28 @@ class Montage:
             print(f"✅ Successfully created vertical TikTok video: {output_path}")
         except subprocess.CalledProcessError as e:
             print(f"❌ FFmpeg error: {e}")
+
+
+    def _create_montage(self):
+        if "Kill" in self.events_config:
+            self.kill_proc = KillEventsProcessor(self.output_dir)
+            best_kill_clips = self.kill_proc.find_best_kills()
+            new_folder = ''.join((self.output_dir, '/best_kill_clips'))
+            os.makedirs(new_folder, exist_ok=True)
+            move_clips_to_folder(best_kill_clips, self.montage_length_sec, self.output_dir, new_folder)
+
+        for dir in os.listdir(self.output_dir):
+            if os.path.isdir(os.path.join(self.output_dir, dir)) and dir not in ("Kill","KillStreak"):
+                clips = []
+                for clip in os.listdir(os.path.join(self.output_dir, dir)):
+                    if clip.endswith("mp4"):
+                        clips.append(clip)
+                new_folder = ''.join((self.output_dir, f"/{dir}_compilation_clips"))
+                os.makedirs(new_folder, exist_ok=True)
+                move_clips_to_folder(clips, self.montage_length_sec, self.output_dir, new_folder)
+                self.make_compilation(os.path.join(self.output_dir, f"{dir}_compilation_clips"),
+                                            os.path.join(self.output_dir, f"{dir}_highlight_reel.mp4"))
+
+                if not self.vertical_format:
+                    self.make_tiktok(os.path.join(self.output_dir, f"{dir}_highlight_reel.mp4"),
+                                        os.path.join(self.output_dir, f"{dir}_highlight_reel_tiktok.mp4"))
