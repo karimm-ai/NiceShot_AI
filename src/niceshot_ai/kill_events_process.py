@@ -44,7 +44,6 @@ class KillEventsProcessor:
             event["medals_count"] = right - left
 
         events.sort(key=lambda x: x.get("medals_count", 0), reverse=True)
-        print(events)
 
         with open(f"{self.output_dir}/events_temp_2.json", "w") as f:
             json.dump(events, f, indent=4)
