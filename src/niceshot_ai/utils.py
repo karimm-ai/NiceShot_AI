@@ -80,7 +80,7 @@ def move_clips_to_folder(clips_paths: list, montage_length: int, output_dir: str
 
         if vid_path:
             final_clips.append(vid_path)
-            current_length += get_duration(vid_path)
+            current_length += get_duration(str(vid_path))
 
     for clip in final_clips:
         shutil.copy(clip, new_folder)
@@ -129,3 +129,27 @@ def reencode_to_h264(input_file, output_dir):
         except subprocess.CalledProcessError as e:
             print(f"FFmpeg failed: {e}")
             return None
+
+
+def is_mp4_valid(ffmpeg_path: str, path: str) -> bool:
+        result = subprocess.run(
+            [
+                ffmpeg_path,
+                "-v", "error",
+                "-i", path,
+                "-map", "0:v:0",
+                "-map", "0:a:0?",
+                "-f", "null",
+                "-"
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+
+        if result.returncode != 0:
+            print(f"❌ Corrupted/invalid MP4: {path}")
+            print(result.stderr)
+            return False
+
+        return True
