@@ -27,7 +27,7 @@ class GUI:
         )
 
         games = ["Call of Duty: Black Ops 6", "Call of Duty: Black Ops 7"]
-        coaching_type = ["None", "Basic", "Short", "Long", "Very Long"]
+        coaching_type = ["None", "Quick", "Basic", "Long", "Full"]
 
         game_frame = tk.Frame(root, bg="#dcb561")
         game_frame.pack(fill="x", padx=20, anchor="w", pady=20)
@@ -239,7 +239,7 @@ class GUI:
         root_dir = base_dir.parent.parent.parent
 
         python_file = root_dir / ".venv" / "Scripts" / "python.exe"
-        cli_file = base_dir / "niceshot_ai.py"
+        cli_file = base_dir / "niceshot_ai_cli.py"
 
         args = [
             python_file,
