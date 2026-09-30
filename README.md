@@ -109,19 +109,24 @@ Simple demo showcasing tool results: (https://youtu.be/op1GDREXiOg)
 To get started with **NiceShot_AI**, clone the repository first and install Python version **3.10.11**.
 
 #### **Second: Installing the Dependencies**
-Create a Python virtual environment (optional, but recommended).
+1- Create a Python virtual environment (optional, but recommended).
 
 ```bash
 python -m venv venv
+```
+
+2- Activate the environment.
+
+```bash
 venv\Scripts\activate
 ```
 
-Install torch cuda. I used cuda 12.1 for GTX1650 4GB. Currently, I am using nightly cuda 12.8 for RTX5070 8GB:
+3- Install torch cuda. I used cuda 12.1 for GTX1650 4GB. Currently, I am using nightly cuda 12.8 for RTX5070 8GB:
 ```bash
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 ```
 
-Install dependencies:
+4- Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
@@ -130,7 +135,7 @@ pip install -r requirements.txt
 
 ### **Run the tool**
 ```
-from niceshot_ai.niceshot_ai import NiceShot_AI
+from niceshot_ai_main import NiceShot_AI
 
 def main():
     niceshot_ai = NiceShot_AI("Call of Duty: Black Ops 7", # Name of the game
@@ -159,7 +164,7 @@ if __name__ == "__main__":
 ---
 
 ### **Processing Speed**
-(Note: Coaching processing speed results is still not included)
+(Note: Coaching processing speed results are still not included)
 
 Tested on laptop_1 with the following specs:
 - **CPU**: core i9 14th gen
