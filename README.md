@@ -1,3 +1,7 @@
+**English | [العربية](README-ar.md)**
+
+
+
 ## **NiceShot AI: The analytics layer games do not add**
 - **Lightweight tool**
 - **Runs locally**
