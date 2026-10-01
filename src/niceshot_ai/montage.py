@@ -1,4 +1,4 @@
-from utils import get_duration, move_clips_to_folder
+from utils import get_duration, move_clips_to_folder, is_mp4_valid
 
 import os, subprocess
 from kill_events_process import KillEventsProcessor
@@ -49,7 +49,7 @@ class Montage:
                 path = os.path.join(input_folder, clip)
 
                 # Check clip before adding it to FFmpeg
-                if not self.is_mp4_valid(path):
+                if not is_mp4_valid(self.ffmpeg_path, path):
                     print(f"⚠️ Skipping corrupted/invalid clip: {clip}")
                     continue
 
