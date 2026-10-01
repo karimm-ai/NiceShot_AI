@@ -10,6 +10,7 @@ import re
 from PIL import Image
 import time
 import unicodedata
+from pathlib import Path
 
 
 
@@ -147,10 +148,11 @@ class Observer:
 
         k = max(1, int(len(clips) * self.sample_size))
         sample = random.sample(clips, k=k)
+        ffmpeg_path = Path(__file__).resolve().parent / "ffmpeg.exe"
 
         with open(output_file, "a", encoding="utf-8") as f:
             for clip in sample:
-                if is_mp4_valid("ffmpeg.exe", f"{folder}/{clip}"):
+                if is_mp4_valid(str(ffmpeg_path), f"{folder}/{clip}"):
                     print(f"Analyzing {clip} ...")
                     self.pre_process_gameplay(f"{folder}/{clip}")
                     time.sleep(1)
