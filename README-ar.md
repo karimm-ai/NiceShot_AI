@@ -33,7 +33,7 @@
 
 <p align="center">
   <a href="https://niceshot-ai.itch.io/niceshot-ai">
-    <img src="https://img.shields.io/badge/تنزيل%20البرنامج-itch.io-FA5C5C?style=for-the-badge&logo=itchdotio&logoColor=yellow" alt="تنزيل">
+    <img src="https://img.shields.io/badge/Download%20Tool-itch.io-FA5C5C?style=for-the-badge&logo=itchdotio&logoColor=yellow" alt="تنزيل">
   </a>
 </p>
 
