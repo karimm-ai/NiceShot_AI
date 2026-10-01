@@ -328,6 +328,9 @@ class YOLODetector:
             if self.last_known_context is not None:
                 event = Event(event_type, starting_time, ending_time, video_num, **self.last_known_context)
                 self.last_known_context = None
+            
+            else:
+                event = Event(event_type, starting_time, ending_time, video_num)
 
         else:
             event = Event(event_type, starting_time, ending_time, video_num)
