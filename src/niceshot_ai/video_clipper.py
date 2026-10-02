@@ -76,12 +76,25 @@ class Clipper:
         self.clip_progress = self.percentages.copy()
         with open(f"{self.output_dir}/{meta_file}", 'r') as f:
             events = json.load(f)
-            clip_events = []
-            for event in events:
-                video_path = self.video_path#[int(event['desc'][-14])-1]
-                out_dir = ''.join((self.output_dir, "/", event['type']))
-                os.makedirs(out_dir, exist_ok=True)
-                clip_events.append((out_dir, event, video_path))
+
+        unique_events = []
+        seen = set()
+        for event in events:
+            values = tuple(event.values())
+            if values not in seen:
+                seen.add(values)
+                unique_events.append(event)
+
+        del events
+        events = unique_events
+        del seen
+        
+        clip_events = []
+        for event in events:
+            video_path = self.video_path#[int(event['desc'][-14])-1]
+            out_dir = ''.join((self.output_dir, "/", event['type']))
+            os.makedirs(out_dir, exist_ok=True)
+            clip_events.append((out_dir, event, video_path))
 
         print(clip_events)
 
