@@ -76,11 +76,11 @@ NiceShot AI is a Python tool powered by computer vision to analyze gameplay vide
 - **Accurate Event Confirmation**: Using EasyOCR to prevent counting events occurring in special game scenes (ex.KILLCAMS and SPECTATING).
 - **Special Events Detection**: (Ex. Kill Streaks occurring from the combination of multiple consecutive kills within a time threshold).
 - **Events Timestamping & CSV Output**: Timestamps detected events and dumps into a CSV file with 2 columns [Timestamp, Event] for further gameplay data analysis and inspections.
-- **Session Analysis**: Creates a summary report consisting of multiple charts providing a post-session stats analysis.
+- **Session Stats Summary**: Creates a summary report consisting of multiple charts providing a post-session stats analysis.
 
 ![Report Screenshot](sample_report.png)
 
-- **Lightweight Coaching**: Analyzes as much short negative clips (ex.Deaths) as needed, understanding the scene frame by frame using VLM, then interpreting what happened and providing coaching and better play suggestions for each single clip using LLM. Outputs to "coaching.jsonl" file.
+- **Lightweight Coaching**: Analyzes as much short negative clips (ex.Deaths) as needed, understanding the scene frame by frame using VLM, then interpreting what happened and providing coaching and better play suggestions for each single clip using LLM. Outputs to "coaching.jsonl" file & local SQLite database.
 
 |Type|% of negative clips analyzed|
 |-------|------------------------|
@@ -88,6 +88,33 @@ NiceShot AI is a Python tool powered by computer vision to analyze gameplay vide
 |'Basic|25%|
 |'Long'|50%|
 |'Full'| 100%|
+
+Sample Output:
+```
+{'immediate_cause': 'The player was killed by an enemy named Attackers who was located to the right and slightly behind the player.',
+ 'player_responsibility': 'NO CLEAR FAULT',
+ 'last_realistic_opportunity': 'The player should have used the wooden box as cover during the engagement, then escaped through the stairs before the next enemy approached.',
+ 'better_play': "The player should have aimed for the enemy's head to increase the likelihood of a critical hit, which could have potentially incapacitated the enemy more quickly and reduced the risk of being hit by return fire.",
+ 'coaching_tip': 'When engaging enemies, always aim for the head to maximize damage. Use the environment for cover, and plan your escape routes in advance to avoid being trapped.',
+ 'confidence': '"HIGH"\n}'}
+```
+
+- **Session Analysis Summary**: Aggregates analysis of several negative clips (ex.Death) into an organized summary identifying player's recurring mistakes and offering coaching tips for future sessions.
+
+sample Output:
+```
+Coaching Summary:
+
+1. **General Patterns**: The player consistently failed to utilize the environment effectively for cover and did not aim for critical targets, leading to fatal encounters.
+
+2. **Improvements**:
+
+   - **Aim for Critical Targets**: Always aim for the enemy's head to maximize damage and increase the likelihood of a critical hit.
+
+   - **Use Environmental Cover**: Make full use of available cover, such as wooden structures, to protect yourself from enemy fire.
+
+   - **Plan Escape Routes**: Before engaging enemies, plan your escape routes and consider retreating to more defensible positions when under heavy fire.
+```
 
 ---
 
@@ -105,6 +132,7 @@ NiceShot AI is a Python tool powered by computer vision to analyze gameplay vide
 ### **Known Limitations**
 
 - **Event detection is not perfect**: From my testing, an event can get detected more than once or not detected at all.
+- **Coaching component may miss accuracy**: This might be due to the lightweight VLM and LLM currently used in the pipeline. From my testing, VLM may not accurately describe the gameplay frame given resulting in inaccurate or insufficient descriptions provided to the LLM. Thus, affecting the quality and accuracy of coaching tips and better play suggestions output by the LLM. Currently, I am working on refining the VLM prompts to produce more grounded and factually accurate scene descriptions.
 
 ---
 
@@ -137,7 +165,7 @@ pip install -r requirements.txt
 
 ---
 
-### **Run the tool**
+### **Run the tool (Option 1: Python)**
 ```
 from niceshot_ai_main import NiceShot_AI
 
@@ -164,6 +192,12 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
+### **Run the tool (Option 2: CLI)**
+```
+<path/to/venv/Scripts/python.exe> <path/to/niceshot_ai_cli.py> --game <game> --input <video_path> --output <output_dir> --comp_len 0 --session_analysis --save_clips --compilation --coaching "quick"
+```
+
 
 ---
 
