@@ -1,10 +1,14 @@
 from utils import resource_path
 from event_confirm import EventConfirm
 from configs.games_config import *
+from storage import SQLiteDB
 
 import logging, os, json
 import random
 from multiprocessing import Process
+from datetime import datetime
+from pathlib import Path
+import re
 
 
 def start_process(target):
@@ -43,6 +47,7 @@ class NiceShot_AI:
 
         if advanced_detection:
             self.last_known_context = None
+            self.event_confirm = EventConfirm()
 
         self.output_dir = output_dir
         self.video_path = video_path
@@ -59,11 +64,12 @@ class NiceShot_AI:
         self.vertical_format = vertical_format
         self.coaching = coaching
 
+        self.session_id = datetime.now().strftime("%Y%m%d%H%M%S")
+        self.game_name = game_name
+
+
         self.ffmpeg_path = resource_path("src/niceshot_ai/ffmpeg.exe")
         print(f"FFMPEG PATH: {self.ffmpeg_path}")
-
-        if advanced_detection:
-            self.event_confirm = EventConfirm()
 
         logging.basicConfig(
             filename="tracker.log",
@@ -92,6 +98,25 @@ class NiceShot_AI:
         if self.coaching is not None:
             start_process(target=self.run_observer)
             start_process(target=self.run_coach)
+
+
+    def init_db(self, path):
+        self.sqlitedb = SQLiteDB(path)
+        self.sqlitedb.create_table("Session",
+                              """
+                                session_id INTEGER PRIMARY KEY,
+                                game_name TEXT NOT NULL,
+                                summary TEXT
+                              """)
+        self.sqlitedb.create_table("Event",
+                              """
+                                event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                session_id INTEGER NOT NULL,
+                                event_type TEXT NOT NULL,
+                                timestamp TEXT NOT NULL,
+                                data TEXT NOT NULL
+                              """)
+
 
 
     def run_detector(self):
@@ -125,6 +150,12 @@ class NiceShot_AI:
         self.clipper._process_clips(meta_file)
 
 
+    def run_montage(self):
+        from montage import Montage
+
+        montage = Montage(self.output_dir, self.montage_length_sec, self.events_config, self.ffmpeg_path, self.vertical_format)
+        montage._create_montage()
+
 
     def run_reporting(self):
         from report import ReportMaker
@@ -140,7 +171,6 @@ class NiceShot_AI:
             func = getattr(report, chart["name"])
             func(self.report_config["color_pallete"], chart["width"], chart["height"])
         report.save_report(1)
-
 
 
     def run_observer(self):
@@ -186,6 +216,13 @@ class NiceShot_AI:
 
 
     def run_coach(self):
+        db_path = Path(__file__).resolve().parent / "niceshot.db"
+        
+        if not db_path.exists():
+            self.init_db(db_path)
+
+        self.sqlitedb = SQLiteDB(db_path)
+
         from coach import Coach
 
         print("Running Coach...")
@@ -193,14 +230,81 @@ class NiceShot_AI:
         for key, val in self.events_config.items():
             if val.get('llm_prompt'):
                 results = ai_coach.analyze_session(f"{self.output_dir}/{key}.jsonl", val.get('llm_prompt'))
+                
+                self.add_events_to_db(key, results)
+                
                 with open(f"{self.output_dir}/{key}_coaching.jsonl", 'w') as f:
                     json.dump(results, f, indent=2)
+
+        session_results = self.retrieve_session_results()
+
+        llm_summary_prompt = f"""
+            Analyze the player's session using the records below and provide a concise coaching summary.
+
+            Identify:
+            The most important general recurring patterns across the session.
+            2–3 specific, actionable improvements for future sessions.
+
+            Use only information supported by the records. Ignore corrupted, duplicated, incomplete, or irrelevant text, and do not invent events or details. If the data is unclear or conflicting, avoid making assumptions.
+            Focus on practical insights rather than describing every event. Prioritize repeated or high-impact issues and keep the final summary clear, concise, and useful to the player.
+
+            Records:
+            {session_results}
+
+        """
+        messages = [
+                    {
+                        "role": "system",
+                        "content": "You are a concise game-session coach. Use only the provided session records. Ignore corrupted or duplicated data. Never invent facts. Identify important patterns and give practical, actionable advice."
+                    },
+                    {
+                        "role": "user",
+                        "content": llm_summary_prompt
+                    }
+                    ]
+
+        session_summary = ai_coach.infer(messages)
+        print(f"SESSION SUMMARY\n{session_summary}")
+
+        self.add_summary_to_db(session_summary)
 
         del ai_coach
 
 
-    def run_montage(self):
-        from montage import Montage
+    def add_events_to_db(self, event: str, records: list):
+        counter = 0
+        records_to_insert = []
+        for record in records:
+            timestamp = re.search(r'@(\d{2}\.\d{2}\.\d{2})', record['clip']).group(1).replace('.', ':')
+            coahing_json = json.dumps(record['coaching'])
+            rec = {"session_id": self.session_id, "event_type": event, "timestamp": timestamp, "data": coahing_json}
+            records_to_insert.append(rec)
+            counter += 1
+            if counter >= 20 and len(records_to_insert) > 0:
+                self.sqlitedb.insert_many("Event", records_to_insert)
+                counter = 0
+                records_to_insert = []
 
-        montage = Montage(self.output_dir, self.montage_length_sec, self.events_config, self.ffmpeg_path, self.vertical_format)
-        montage._create_montage()
+        if len(records_to_insert) > 0:
+            self.sqlitedb.insert_many("Event", records_to_insert)       
+            del records_to_insert
+
+
+    def retrieve_session_results(self):
+        records = self.sqlitedb.find("Event", {"session_id": self.session_id})
+        text_length = 0
+        results = ""
+        for record in records:
+            if text_length > 1000:
+                break
+
+            rec_val = record['data'] + "\n\n"
+            results += rec_val
+            text_length += len(results)
+
+        return results
+
+
+    def add_summary_to_db(self, summary: str):
+        record = {"session_id": self.session_id, "game_name": self.game_name, "summary": summary}
+        self.sqlitedb.insert("Session", record)
