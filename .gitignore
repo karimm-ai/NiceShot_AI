@@ -222,3 +222,4 @@ dist/
 cvat/
 Training/
 main2.py
+*.db
