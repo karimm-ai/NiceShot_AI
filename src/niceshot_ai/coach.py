@@ -1,6 +1,7 @@
 import torch
 from transformers import (AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, AutoConfig)
 import json
+import re
 
 
 class Coach:
@@ -87,8 +88,43 @@ class Coach:
                 ]
 
                 response = self.infer(messages)
+                response_structured = self.parse_output(response)
 
-                suggestion = {'clip': clip, 'coaching': response}
+                suggestion = {'clip': clip, 'coaching': response_structured}
                 suggestions.append(suggestion)
 
         return suggestions
+
+
+    def parse_output(self, output: str) -> dict:
+        result = {}
+
+        pattern = r'["\']?([A-Za-z_][A-Za-z0-9_]*)["\']?\s*:'
+
+        matches = list(re.finditer(pattern, output))
+
+        for i, match in enumerate(matches):
+            key = match.group(1)
+
+            # Value starts after the colon
+            value_start = match.end()
+
+            # Value ends at the next key, or end of string
+            if i + 1 < len(matches):
+                value_end = matches[i + 1].start()
+            else:
+                value_end = len(output)
+
+            value = output[value_start:value_end].strip()
+
+            value = value.rstrip(",").strip()
+
+            if len(value) >= 2:
+                if value[0] == '"' and value[-1] == '"':
+                    value = value[1:-1]
+                elif value[0] == "'" and value[-1] == "'":
+                    value = value[1:-1]
+
+            result[key] = value
+
+        return result
