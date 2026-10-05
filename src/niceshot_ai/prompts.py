@@ -106,23 +106,20 @@ CONFIDENCE must be exactly one of:
 
 IMPORTANT OUTPUT RULES:
 
-Return ONLY one valid JSON object.
+Return ONLY one valid DICTIONARY object.
 
-The response MUST start with { and end with }.
+The response MUST start with { and end with }. Respect the DICTIONARY format. Every key has one value.
 
-Do NOT output Markdown.
-Do NOT output ```json.
-Do NOT output explanations.
-Do NOT output any text before or after the JSON.
+Do not add any Tilde ~ signs.
 
-The JSON object MUST contain exactly these keys:
+The DICTIONARY object MUST contain exactly and ONLY these keys:
 
 {
   "immediate_cause": "...",
   "player_responsibility": "...",
   "last_realistic_opportunity": "...",
   "better_play": "...",
-  "coaching": "...",
+  "coaching_tip": "...",
   "confidence": "HIGH"
 }
 
