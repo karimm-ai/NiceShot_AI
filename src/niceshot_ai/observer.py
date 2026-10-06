@@ -1,6 +1,6 @@
-from utils import is_mp4_valid
+from utils import is_mp4_valid, report_progress
 
-
+from tqdm import tqdm
 import cv2
 from qwen_vl_utils import process_vision_info
 import os, json
@@ -21,6 +21,7 @@ class Observer:
         self.type = type
         self.sample_size = self.specify_sample()
         self.obs_summary = Observer_Summary()
+        self.percentages = set(range(1, 101, 1))
 
         
     def load_model(self):
@@ -140,6 +141,8 @@ class Observer:
 
 
     def analyze_session(self, prompt, folder):
+        total_events_analyzed = 0
+
         output_file = f"{folder}.jsonl"
         clips = []
 
@@ -150,26 +153,34 @@ class Observer:
         sample = random.sample(clips, k=k)
         ffmpeg_path = Path(__file__).resolve().parent / "ffmpeg.exe"
 
-        with open(output_file, "a", encoding="utf-8") as f:
-            for clip in sample:
-                if is_mp4_valid(str(ffmpeg_path), f"{folder}/{clip}"):
-                    print(f"Analyzing {clip} ...")
-                    self.pre_process_gameplay(f"{folder}/{clip}")
-                    time.sleep(1)
-                    obs = self.analyze_video(f"{self.output_dir}/sampled_clip.mp4", prompt)
-                    video_observations = ""
-                    for idx in obs:
-                        moment_obs = f"[{idx['timestamp']:.2f}s] {idx['description']}"
-                        video_observations = video_observations + moment_obs + "\n"
-                    
-                    final_observation, _ = self.obs_summary.aggregate_observations(video_observations)
+        progress_bar = tqdm(total=len(sample), desc="Analyzing Events", unit="Event")
 
-                    record = {
-                        "clip": clip,
-                        "msg": final_observation
-                    }
+        for clip in sample:
+            if is_mp4_valid(str(ffmpeg_path), f"{folder}/{clip}"):
+                #print(f"Analyzing {clip} ...")
+                self.pre_process_gameplay(f"{folder}/{clip}")
+                time.sleep(1)
+                obs = self.analyze_video(f"{self.output_dir}/sampled_clip.mp4", prompt)
+                video_observations = ""
+                for idx in obs:
+                    moment_obs = f"[{idx['timestamp']:.2f}s] {idx['description']}"
+                    video_observations = video_observations + moment_obs + "\n"
+                
+                final_observation, _ = self.obs_summary.aggregate_observations(video_observations)
 
+                record = {
+                    "clip": clip,
+                    "msg": final_observation
+                }
+
+                with open(output_file, "a", encoding="utf-8") as f:
                     f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+            progress_bar.update(1)
+            total_events_analyzed += 1
+            report_progress(self.output_dir, total_events_analyzed, len(sample), self.percentages, "Analyzing Events ...")
+
+        progress_bar.close()
 
 
     def specify_sample(self):
