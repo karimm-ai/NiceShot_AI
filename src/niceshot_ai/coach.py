@@ -1,13 +1,17 @@
+from utils import report_progress
+
 import torch
 from transformers import (AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, AutoConfig)
 import json
 import re
+from tqdm import tqdm
 
 
 class Coach:
     def __init__(self, output_dir: str):
         self.output_dir = output_dir
         self.model, self.tokenizer = self.load_model()
+        self.percentages = set(range(1, 101, 1))
 
 
     def load_model(self):
@@ -67,6 +71,13 @@ class Coach:
 
     def analyze_session(self, observations_file_path, prompt):
         suggestions = []
+        total_events_analyzed = 0
+
+        with open(observations_file_path, "r", encoding="utf-8") as f:
+            lines_count = sum(1 for _ in f)
+
+        progress_bar = tqdm(total=lines_count, desc="Generating Insights", unit="event")
+
         with open(observations_file_path, "r", encoding="utf-8") as f:
             for line in f:
                 llm_prompt = prompt
@@ -92,6 +103,10 @@ class Coach:
 
                 suggestion = {'clip': clip, 'coaching': response_structured}
                 suggestions.append(suggestion)
+                progress_bar.update(1)
+                total_events_analyzed += 1
+                report_progress(self.output_dir, total_events_analyzed, lines_count, self.percentages, "Generating Insights ...")
+
 
         return suggestions
 
