@@ -148,7 +148,7 @@ def is_mp4_valid(ffmpeg_path: str, path: str) -> bool:
         )
 
         if result.returncode != 0:
-            print(f"❌ Corrupted/invalid MP4: {path}")
+            print(f"Corrupted/invalid MP4: {path}")
             print(result.stderr)
             return False
 
