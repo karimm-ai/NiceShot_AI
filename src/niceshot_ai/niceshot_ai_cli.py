@@ -2,6 +2,15 @@ import argparse
 import sys
 import json
 from niceshot_ai_main import NiceShot_AI 
+import sys
+
+
+if sys.stdout:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+if sys.stderr:
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    
 
 def main():
     parser = argparse.ArgumentParser(description="NiceShot AI CLI")
