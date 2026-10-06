@@ -1,4 +1,4 @@
-from utils import get_duration, move_clips_to_folder, is_mp4_valid
+from utils import get_duration, move_clips_to_folder, is_mp4_valid, report_progress
 
 import os, subprocess
 from kill_events_process import KillEventsProcessor
@@ -13,6 +13,13 @@ class Montage:
         self.events_config = events_config
         self.ffmpeg_path = ffmpeg_path
         self.vertical_format = vertical_format
+        
+        self.needed_montages = []
+        for event, val in self.events_config.items():
+            if val.get("clip_eligible"):
+                self.needed_montages.append(event)
+        
+        self.percentages = set(range(1, 101, 1))
 
         
     def make_compilation(
@@ -21,7 +28,7 @@ class Montage:
         output_file: str,
         fade_duration: float = 0.5
     ):
-        print("🎬 Creating Montage...\n")
+        print("Creating Montage...\n")
 
         clips = sorted([
             f for f in os.listdir(input_folder)
@@ -29,7 +36,7 @@ class Montage:
         ])
 
         if not clips:
-            print("❌ No clips found.")
+            print("No clips found.")
             return
 
         chunk_size = 15
@@ -38,7 +45,7 @@ class Montage:
         for idx in range(0, len(clips), chunk_size):
             chunk = clips[idx:idx + chunk_size]
 
-            print(f"⚙️ Processing chunk {idx // chunk_size + 1}...")
+            print(f"Processing chunk {idx // chunk_size + 1}...")
 
             input_args = []
             filter_parts = []
@@ -50,7 +57,7 @@ class Montage:
 
                 # Check clip before adding it to FFmpeg
                 if not is_mp4_valid(self.ffmpeg_path, path):
-                    print(f"⚠️ Skipping corrupted/invalid clip: {clip}")
+                    print(f"Skipping corrupted/invalid clip: {clip}")
                     continue
 
                 i = valid_count
@@ -79,7 +86,7 @@ class Montage:
 
             # Nothing valid in this chunk
             if valid_count == 0:
-                print("⚠️ No valid clips in this chunk. Skipping...")
+                print("No valid clips in this chunk. Skipping...")
                 continue
 
             # Concatenate only valid clips
@@ -126,18 +133,18 @@ class Montage:
 
         # No valid chunks were created
         if not temp_outputs:
-            print("❌ No valid MP4 clips found.")
+            print("No valid MP4 clips found.")
             return
 
         # Merge
-        print("🔗 Merging...")
+        print("Merging...")
 
         if len(temp_outputs) == 1:
             # Only one chunk → move it to final output
             os.replace(temp_outputs[0], output_file)
 
             print(
-                f"✅ Only one chunk, moved to final output: "
+                f"Only one chunk, moved to final output: "
                 f"{output_file}"
             )
 
@@ -178,7 +185,7 @@ class Montage:
                     f"FFmpeg merge failed with code {result.returncode}"
                 )
 
-        print(f"✅ Done: {output_file}")
+        print(f"Done: {output_file}")
 
 
     def make_tiktok(self, video_path: str, output_path: str):
@@ -205,12 +212,14 @@ class Montage:
 
         try:
             subprocess.run(cmd, check=True)
-            print(f"✅ Successfully created vertical TikTok video: {output_path}")
+            print(f"Successfully created vertical TikTok video: {output_path}")
         except subprocess.CalledProcessError as e:
-            print(f"❌ FFmpeg error: {e}")
+            print(f"FFmpeg error: {e}")
 
 
     def _create_montage(self):
+        total_montages_finished = 0
+        
         if "Kill" in self.events_config:
             self.kill_proc = KillEventsProcessor(self.output_dir)
             best_kill_clips = self.kill_proc.find_best_kills()
@@ -229,6 +238,8 @@ class Montage:
                 move_clips_to_folder(clips, self.montage_length_sec, self.output_dir, new_folder)
                 self.make_compilation(os.path.join(self.output_dir, f"{dir}_compilation_clips"),
                                             os.path.join(self.output_dir, f"{dir}_highlight_reel.mp4"))
+                total_montages_finished+=1
+                report_progress(self.output_dir, total_montages_finished, len(self.needed_montages), self.percentages, "Creating Montages ...")
 
                 if not self.vertical_format:
                     self.make_tiktok(os.path.join(self.output_dir, f"{dir}_highlight_reel.mp4"),
