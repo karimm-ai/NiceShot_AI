@@ -642,9 +642,9 @@ class GUI(QMainWindow):
         else:
             base_dir = Path(__file__).resolve().parent
 
-        root_dir = base_dir.parent.parent
+        root_dir = base_dir.parent.parent.parent
 
-        python_file = root_dir / "niceshot_env" / "Scripts" / "python.exe"
+        python_file = root_dir / ".venv" / "Scripts" / "python.exe"
         cli_file = base_dir / "niceshot_ai_cli.py"
 
         # ---------------------------------------------------------
