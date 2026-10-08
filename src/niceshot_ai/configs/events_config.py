@@ -12,7 +12,7 @@ cod_bo6_config = {
              'conf_thres': 0.6,
              'confirm_event': True,
              'clip_eligible': True,
-             'context': {'weapon': ((1506, 866), (1566, 890)), 'location': ((906, 86), (1010, 108))}
+             #'context': {'weapon': ((1506, 866), (1566, 890)), 'location': ((906, 86), (1010, 108))}
              },
 
     "Medal": {'tracker': DeepSort(max_age=30, nms_max_overlap=0.01),
@@ -40,7 +40,7 @@ cod_bo7_config = {
              'conf_thres': 0.46,
              'confirm_event': True,
              'clip_eligible': True,
-             'context': {'weapon': ((1506, 866), (1566, 890)), 'location': ((906, 86), (1010, 108))}
+             #'context': {'weapon': ((1506, 866), (1566, 890)), 'location': ((906, 86), (1010, 108))}
              },
 
     "Medal": {'tracker': MedalTracker(),
