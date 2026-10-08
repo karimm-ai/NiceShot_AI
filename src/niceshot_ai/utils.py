@@ -1,7 +1,6 @@
 import json, subprocess, os, csv, sys, shutil
 from pathlib import Path
-
-
+import re
 import cv2
 
 
@@ -153,3 +152,38 @@ def is_mp4_valid(ffmpeg_path: str, path: str) -> bool:
             return False
 
         return True
+
+
+def clean_and_save_text(text, output_file="output.txt"):
+    """
+    Clean a text string and save it to a TXT file.
+
+    - Normalizes line endings
+    - Removes excessive blank lines
+    - Removes trailing/leading whitespace
+    - Fixes malformed numbering such as '3.0' -> '3.'
+    - Preserves the original text structure
+    """
+
+    if not isinstance(text, str):
+        raise TypeError("text must be a string")
+
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+
+    text = "\n".join(line.strip() for line in text.split("\n"))
+
+    text = re.sub(
+        r"^(\d+)\.0\s+",
+        r"\1. ",
+        text,
+        flags=re.MULTILINE
+    )
+
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    text = re.sub(r"[ \t]+\n", "\n", text)
+    text = text.strip()
+
+    with open(output_file, "w", encoding="utf-8") as file:
+        file.write(text)
+
+    return text
