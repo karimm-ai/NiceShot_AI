@@ -1,4 +1,4 @@
-from utils import resource_path
+from utils import resource_path, clean_and_save_text
 from event_confirm import EventConfirm
 from configs.games_config import *
 from storage import SQLiteDB
@@ -233,20 +233,20 @@ class NiceShot_AI:
                 
                 self.add_events_to_db(key, results)
                 
-                with open(f"{self.output_dir}/{key}_coaching.jsonl", 'w') as f:
+                with open(f"{self.output_dir}/{key}_coaching.json", 'w') as f:
                     json.dump(results, f, indent=2)
 
         session_results = self.retrieve_session_results()
 
         llm_summary_prompt = f"""
-            Analyze the player's session using the records below and provide a concise coaching summary.
+            Analyze my session using the records below and provide a concise coaching summary. The records represent multiple encounters that happened during the full session.
 
             Identify:
-            The most important general recurring patterns across the session.
+            The most important general recurring patterns across the provided records.
             2–3 specific, actionable improvements for future sessions.
 
             Use only information supported by the records. Ignore corrupted, duplicated, incomplete, or irrelevant text, and do not invent events or details. If the data is unclear or conflicting, avoid making assumptions.
-            Focus on practical insights rather than describing every event. Prioritize repeated or high-impact issues and keep the final summary clear, concise, and useful to the player.
+            Focus on practical insights rather than describing every event. Prioritize repeated or high-impact issues and keep the final summary clear, concise, and highly useful to me.
 
             Records:
             {session_results}
@@ -264,7 +264,9 @@ class NiceShot_AI:
                     ]
 
         session_summary = ai_coach.infer(messages)
-        print(f"SESSION SUMMARY\n{session_summary}")
+        print(session_summary)
+        
+        clean_and_save_text(session_summary, f"{self.output_dir}/coaching_summary.txt")
 
         self.add_summary_to_db(session_summary)
 
@@ -300,8 +302,9 @@ class NiceShot_AI:
 
             rec_val = record['data'] + "\n\n"
             results += rec_val
-            text_length += len(results)
+            text_length += len(results.split())
 
+        print(results)
         return results
 
 
