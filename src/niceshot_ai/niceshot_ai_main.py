@@ -304,7 +304,6 @@ class NiceShot_AI:
             results += rec_val
             text_length += len(results.split())
 
-        print(results)
         return results
 
 
