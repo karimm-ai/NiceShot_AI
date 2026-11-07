@@ -242,10 +242,10 @@ Note: The minimum specifications are what I've tested on. Performance depends on
 
 ---
 
-**Future development will move to a paid-access private repository. The private repo will provide access to:**
+## **Future development will move to a paid-access private repository. The private repo will provide access to:**
   - Privately collected and manually annotated datasets for Call of Duty: Black Ops 6, Call of Duty: Black Ops 7 and Call of Duty: Modern Warfare II.
   - Expanded game configuration support to:
-  
+
   |Game|Events Count|
   |----|------|
   |Call of Duty: Modern Warfare II (2022)| 2 |
@@ -259,6 +259,6 @@ Note: The minimum specifications are what I've tested on. Performance depends on
   - Comprehensive analysis of direct & indirect competitors and architectural comparisons between their solutions & NiceShot AI.
   - Future support, improvements & expansion of NiceShot AI.
 
- **Contact me at: niceshot.ai@gmail.com**
+ Contact me at: niceshot.ai@gmail.com
 
 ---
