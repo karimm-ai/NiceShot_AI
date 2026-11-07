@@ -48,13 +48,6 @@ NiceShot AI is a Python tool powered by computer vision to analyze gameplay vide
 |    Medal   |  When a medal earned by the player pops up during gameplay    | Medal type not detected, only count | - |
 |    Death   |  When player gets eliminated during gameplay  |  - | - |
 
-- **Call of Duty: Modern Warfare II (2022) --> Still in testing**
-
-| Key events |                        Description                            |          Limitations        |
-|------------|---------------------------------------------------------------|-----------------------------
-|    Kill    |  Gun kills                                  |  -  |
-|    Death   |  When player gets eliminated during gameplay                |                -              |
-
 ---
 
 ### **Models Description**
@@ -249,6 +242,21 @@ Note: The minimum specifications are what I've tested on. Performance depends on
 
 ---
 
-**For custom development & consultation contact me at: niceshot.ai@gmail.com**
+**Future development will move to a paid-access private repository. The private repo will provide access to:**
+  - Privately collected and manually annotated datasets for Call of Duty: Black Ops 6, Call of Duty: Black Ops 7 and Call of Duty: Modern Warfare II.
+  - Expanded game configuration support to:
+  |Game|Events Count|
+  |----|------|
+  |Call of Duty: Modern Warfare II (2022)| 2 |
+  |Call of Duty: Modern Warfare 4 (2026)| 2 |
+  - New performance metric (aim accuracy) for all supported Call of Duty games.
+  - New non-YOLO detector pipeline.
+  - Notebook-based datasets analysis & models tuning pipeline.
+  - Fine-tuned models evaluation, including precision, recall, and accuracy, presented through matrices and visualizations.
+  - Detailed architecture decisions, design tradeoffs, limitations & flaws.
+  - Comprehensive analysis of direct & indirect competitors and architectural comparisons between their solutions & NiceShot AI.
+  - Future support, improvements & expansion of NiceShot AI.
+
+ **Contact me at: niceshot.ai@gmail.com**
 
 ---
